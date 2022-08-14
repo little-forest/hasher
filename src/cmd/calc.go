@@ -32,7 +32,7 @@ const Flag_Calc_NoShowPath = "no-show-path"
 // calcCmd represents the calc command
 var calcCmd = &cobra.Command{
 	Use:   "calc",
-	Short: "calc hash value and show",
+	Short: "Calculate hash value and show",
 	Long:  ``,
 	Run:   calcHash,
 }

@@ -25,7 +25,7 @@ import (
 // clearCmd represents the clear command
 var clearCmd = &cobra.Command{
 	Use:   "clear",
-	Short: "clear hash attributes",
+	Short: "Clear hash attributes",
 	Long:  ``,
 	Run:   clear,
 }

@@ -30,7 +30,7 @@ const Flag_Update_ForceUpdate = "force-update"
 // updateCmd represents the update command
 var updateCmd = &cobra.Command{
 	Use:   "update",
-	Short: "A brief description of your command",
+	Short: "Calculate file hash and save to extended attribute",
 	Long:  ``,
 	Run:   updateHash,
 }
