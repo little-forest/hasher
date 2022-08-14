@@ -58,10 +58,6 @@ func updateHash(cmd *cobra.Command, args []string) {
 }
 
 func doUpdateHash(path string) error {
-	if _, err := os.Stat(path); err != nil {
-		return fmt.Errorf("file not found : %s", path)
-	}
-
 	hash, err := calcFileHash(path, crypto.SHA1)
 	if err != nil {
 		return err
@@ -75,8 +71,10 @@ func doUpdateHash(path string) error {
 func calcFileHash(path string, alg crypto.Hash) (string, error) {
 	r, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to open file. (%s) : %s", path, err.Error())
+		return "", fmt.Errorf("failed to open file. : %s", err.Error())
 	}
+	defer r.Close()
+
 	hash, err := calcHashString(r, alg)
 	return hash, err
 }
