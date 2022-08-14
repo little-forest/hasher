@@ -58,24 +58,29 @@ func calcHash(cmd *cobra.Command, args []string) {
 	}
 }
 
-func calcFileHash(path string, alg crypto.Hash) (string, error) {
+func openFile(path string) (*os.File, error) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return "", fmt.Errorf("can't stat file : %s", path)
+		return nil, fmt.Errorf("can't stat file : %s", path)
 	}
 
 	if info.Mode().IsDir() {
-		return "", fmt.Errorf("directory : %s", path)
+		return nil, fmt.Errorf("directory : %s", path)
 	}
 
 	if !info.Mode().IsRegular() {
-		return "", fmt.Errorf("non regular file : %s", path)
+		return nil, fmt.Errorf("non regular file : %s", path)
 	}
 
-	r, err := os.Open(path)
+	file, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to open file. : %s", err.Error())
+		return nil, fmt.Errorf("failed to open file. : %s", err.Error())
 	}
+	return file, nil
+}
+
+func calcFileHash(path string, alg crypto.Hash) (string, error) {
+	r, err := openFile(path)
 	defer r.Close()
 
 	hash, err := calcHashString(r, alg)
