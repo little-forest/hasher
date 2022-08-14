@@ -18,13 +18,9 @@ package cmd
 import (
 	"crypto"
 	"fmt"
-	"io"
-	"os"
 
 	"github.com/spf13/cobra"
 )
-
-const HashBufSize = 256 * 1024
 
 // updateCmd represents the update command
 var updateCmd = &cobra.Command{
@@ -66,27 +62,4 @@ func doUpdateHash(path string) error {
 	fmt.Println(hash)
 
 	return nil
-}
-
-func calcFileHash(path string, alg crypto.Hash) (string, error) {
-	r, err := os.Open(path)
-	if err != nil {
-		return "", fmt.Errorf("failed to open file. : %s", err.Error())
-	}
-	defer r.Close()
-
-	hash, err := calcHashString(r, alg)
-	return hash, err
-}
-
-func calcHashString(r io.Reader, alg crypto.Hash) (string, error) {
-	if !alg.Available() {
-		return "", fmt.Errorf("no implementation")
-	}
-
-	hash := alg.New()
-	if _, err := io.CopyBuffer(hash, r, make([]byte, HashBufSize)); err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }
