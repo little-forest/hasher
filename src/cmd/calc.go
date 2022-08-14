@@ -27,26 +27,20 @@ import (
 const HashBufSize = 256 * 1024
 const DefaultHashAlgorithm = crypto.SHA1
 
+const Flag_Calc_NoShowPath = "no-show-path"
+
 // calcCmd represents the calc command
 var calcCmd = &cobra.Command{
 	Use:   "calc",
-	Short: "A brief description of your command",
-	Long: ``,
-	Run: calcHash,
+	Short: "calc hash value and show",
+	Long:  ``,
+	Run:   calcHash,
 }
 
 func init() {
 	rootCmd.AddCommand(calcCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// calcCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// calcCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	calcCmd.Flags().BoolP(Flag_Calc_NoShowPath, "n", false, "don't show path")
 }
 
 func calcHash(cmd *cobra.Command, args []string) {
@@ -55,8 +49,12 @@ func calcHash(cmd *cobra.Command, args []string) {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			continue
-		} 
-		fmt.Fprintf(os.Stdout, "%s  %s\n", hash, v)
+		}
+		if f, _ := cmd.Flags().GetBool(Flag_Calc_NoShowPath); !f {
+			fmt.Fprintf(os.Stdout, "%s  %s\n", hash, v)
+		} else {
+			fmt.Fprintf(os.Stdout, "%s\n", hash)
+		}
 	}
 }
 
