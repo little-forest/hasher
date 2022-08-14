@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/xattr"
 	"github.com/spf13/cobra"
 )
 
@@ -103,16 +102,4 @@ func doUpdateHash(path string, alg crypto.Hash, attrName string, forceUpdate boo
 
 func getPrefix(alg crypto.Hash) string {
 	return Xattr_prefix + "." + strings.ToLower(strings.Replace(alg.String(), "-", "", -1))
-}
-
-func getXattr(file *os.File, attrName string) string {
-	v, err := xattr.FGet(file, attrName)
-	if err != nil {
-		return ""
-	}
-	return string(v)
-}
-
-func setXattr(file *os.File, attrName string, value string) {
-	xattr.FSet(file, attrName, []byte(value))
 }
