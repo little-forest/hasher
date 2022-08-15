@@ -45,7 +45,7 @@ func init() {
 
 func calcHash(cmd *cobra.Command, args []string) {
 	for _, v := range args {
-		hash, err := calcFileHash(v, DefaultHashAlgorithm)
+		hash, err := calcFileHash(v, NewDefaultHashAlg(""))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			continue
@@ -58,7 +58,7 @@ func calcHash(cmd *cobra.Command, args []string) {
 	}
 }
 
-func calcFileHash(path string, alg crypto.Hash) (string, error) {
+func calcFileHash(path string, alg *HashAlg) (string, error) {
 	r, err := openFile(path)
 	defer r.Close()
 
@@ -66,12 +66,12 @@ func calcFileHash(path string, alg crypto.Hash) (string, error) {
 	return hash, err
 }
 
-func calcHashString(r io.Reader, alg crypto.Hash) (string, error) {
-	if !alg.Available() {
+func calcHashString(r io.Reader, hashAlg *HashAlg) (string, error) {
+	if !hashAlg.Alg.Available() {
 		return "", fmt.Errorf("no implementation")
 	}
 
-	hash := alg.New()
+	hash := hashAlg.Alg.New()
 	if _, err := io.CopyBuffer(hash, r, make([]byte, HashBufSize)); err != nil {
 		return "", err
 	}

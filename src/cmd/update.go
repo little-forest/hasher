@@ -85,7 +85,7 @@ func doUpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, er
 		}
 	}
 
-	hash, err := calcHashString(file, alg.Alg)
+	hash, err := calcHashString(file, alg)
 	if err != nil {
 		return false, "", err
 	}
