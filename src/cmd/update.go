@@ -16,10 +16,8 @@ limitations under the License.
 package cmd
 
 import (
-	"crypto"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -45,11 +43,10 @@ func updateHash(cmd *cobra.Command, args []string) {
 	forceUpdate, _ := cmd.Flags().GetBool(Flag_Update_ForceUpdate)
 	verbose, _ := cmd.Flags().GetBool(Flag_root_Verbose)
 
-	alg := DefaultHashAlgorithm
-	attrName := getPrefix(alg)
+	alg := NewDefaultHashAlg(Xattr_prefix)
 
 	for _, p := range args {
-		changed, hash, err := doUpdateHash(p, alg, attrName, forceUpdate)
+		changed, hash, err := doUpdateHash(p, alg, forceUpdate)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			continue
@@ -64,7 +61,7 @@ func updateHash(cmd *cobra.Command, args []string) {
 	}
 }
 
-func doUpdateHash(path string, alg crypto.Hash, attrName string, forceUpdate bool) (bool, string, error) {
+func doUpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, error) {
 	file, err := openFile(path)
 	if err != nil {
 		return false, "", err
@@ -76,7 +73,7 @@ func doUpdateHash(path string, alg crypto.Hash, attrName string, forceUpdate boo
 	modTime := info.ModTime().Format(time.RFC3339Nano)
 
 	var changed bool
-	curHash := getXattr(file, attrName)
+	curHash := getXattr(file, alg.AttrName)
 	if curHash != "" {
 		if curSize := getXattr(file, Xattr_size); size != curSize {
 			changed = true
@@ -88,18 +85,14 @@ func doUpdateHash(path string, alg crypto.Hash, attrName string, forceUpdate boo
 		}
 	}
 
-	hash, err := calcHashString(file, alg)
+	hash, err := calcHashString(file, alg.Alg)
 	if err != nil {
 		return false, "", err
 	}
 
-	setXattr(file, attrName, hash)
+	setXattr(file, alg.AttrName, hash)
 	setXattr(file, Xattr_size, size)
 	setXattr(file, Xattr_modifiedTime, modTime)
 
 	return true, hash, nil
-}
-
-func getPrefix(alg crypto.Hash) string {
-	return Xattr_prefix + "." + strings.ToLower(strings.Replace(alg.String(), "-", "", -1))
 }
