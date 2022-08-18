@@ -31,7 +31,7 @@ const Flag_root_Verbose = "verbose"
 var rootCmd = &cobra.Command{
 	Use:   "hasher",
 	Short: "A file hash utility",
-	Long: ``,
+	Long:  ``,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
@@ -44,6 +44,7 @@ func Execute() {
 	if err != nil {
 		os.Exit(1)
 	}
+	os.Exit(statusWrapper.Status)
 }
 
 func init() {

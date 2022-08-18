@@ -27,7 +27,7 @@ var clearCmd = &cobra.Command{
 	Use:   "clear",
 	Short: "Clear hash attributes",
 	Long:  ``,
-	Run:   clear,
+	RunE:  statusWrapper.RunE(runClear),
 }
 
 func init() {
@@ -35,15 +35,19 @@ func init() {
 
 }
 
-func clear(cmd *cobra.Command, args []string) {
-	// verbose, _ := cmd.Flags().GetBool(Flag_root_Verbose)
-
+func runClear(cmd *cobra.Command, args []string) (int, error) {
+	status := 0
+	var errResult error
 	for _, p := range args {
-		doClear(p)
+		err := clear(p)
+		if err != nil {
+			errResult = err
+		}
 	}
+	return status, errResult
 }
 
-func doClear(path string) error {
+func clear(path string) error {
 	file, err := openFile(path)
 	if err != nil {
 		return err

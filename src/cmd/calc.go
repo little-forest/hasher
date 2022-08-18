@@ -34,7 +34,7 @@ var calcCmd = &cobra.Command{
 	Use:   "calc",
 	Short: "Calculate hash value and show",
 	Long:  ``,
-	Run:   calcHash,
+	RunE:  statusWrapper.RunE(runCalcHash),
 }
 
 func init() {
@@ -43,7 +43,7 @@ func init() {
 	calcCmd.Flags().BoolP(Flag_Calc_NoShowPath, "n", false, "don't show path")
 }
 
-func calcHash(cmd *cobra.Command, args []string) {
+func runCalcHash(cmd *cobra.Command, args []string) (int, error) {
 	for _, v := range args {
 		hash, err := calcFileHash(v, NewDefaultHashAlg(""))
 		if err != nil {
@@ -56,6 +56,7 @@ func calcHash(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(os.Stdout, "%s\n", hash)
 		}
 	}
+	return 0, nil
 }
 
 func calcFileHash(path string, alg *HashAlg) (string, error) {

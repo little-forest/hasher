@@ -30,7 +30,7 @@ var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Calculate file hash and save to extended attribute",
 	Long:  ``,
-	Run:   updateHash,
+	RunE:  statusWrapper.RunE(runUpdateHash),
 }
 
 func init() {
@@ -39,16 +39,20 @@ func init() {
 	updateCmd.Flags().BoolP(Flag_Update_ForceUpdate, "f", false, "Force update")
 }
 
-func updateHash(cmd *cobra.Command, args []string) {
+func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 	forceUpdate, _ := cmd.Flags().GetBool(Flag_Update_ForceUpdate)
 	verbose, _ := cmd.Flags().GetBool(Flag_root_Verbose)
 
 	alg := NewDefaultHashAlg(Xattr_prefix)
 
+	status := 0
+	var errorStatus error
 	for _, p := range args {
-		changed, hash, err := doUpdateHash(p, alg, forceUpdate)
+		changed, hash, err := updateHash(p, alg, forceUpdate)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			errorStatus = err
+			status = 1
 			continue
 		}
 		if verbose {
@@ -59,9 +63,10 @@ func updateHash(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(os.Stdout, "%s  %s %s\n", p, hash, mark)
 		}
 	}
+	return status, errorStatus
 }
 
-func doUpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, error) {
+func updateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, error) {
 	file, err := openFile(path)
 	if err != nil {
 		return false, "", err
