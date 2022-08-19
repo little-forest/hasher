@@ -17,8 +17,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/pkg/xattr"
 	"os"
+
+	"github.com/pkg/xattr"
 )
 
 func openFile(path string) (*os.File, error) {
@@ -54,6 +55,6 @@ func setXattr(file *os.File, attrName string, value string) {
 	xattr.FSet(file, attrName, []byte(value))
 }
 
-func removeXattr(file *os.File, attrName string) {
-	xattr.FRemove(file, attrName)
+func removeXattr(file *os.File, attrName string) error {
+	return xattr.FRemove(file, attrName)
 }

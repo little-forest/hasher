@@ -60,7 +60,9 @@ func clear(path string) error {
 
 	for _, attrName := range attrNames {
 		if strings.HasPrefix(attrName, Xattr_prefix) {
-			removeXattr(file, attrName)
+			if err := removeXattr(file, attrName); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
