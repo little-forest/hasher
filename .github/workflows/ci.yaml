@@ -1,18 +1,19 @@
 name: Continuous integration
 
-on: push
-  #on:
-  #  push:
-  #    branches:
-  #      - 'main'
-  #    paths:
-  #      - src/**
-  #      - .github/workflows/**
-  #      - version
-  #  pull_request:
-  #    paths:
-  #      - src/**
-  #      - .github/workflows/**
+on:
+ push:
+   branches:
+     # - 'main'
+     - '**'
+   paths:
+     - src/**
+     - .github/workflows/**
+     - 'aqua.yaml'
+
+ pull_request:
+   paths:
+     - src/**
+     - .github/workflows/**
 
 jobs:
   build:
@@ -20,6 +21,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - uses: aquaproj/aqua-installer@v1.1.1
+        with:
+          aqua_version: v1.17.1
 
       - name: Setup Go
         uses: actions/setup-go@v3
