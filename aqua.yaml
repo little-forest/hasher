@@ -7,6 +7,3 @@ registries:
 
 packages:
 - name: suzuki-shunsuke/github-comment@v4.4.0
-- name: golangci-lint
-  registry: standard
-  version: v1.48.0
