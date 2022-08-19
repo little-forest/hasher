@@ -74,6 +74,9 @@ func updateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, erro
 	defer file.Close()
 
 	info, err := file.Stat()
+	if err != nil {
+		return false, "", err
+	}
 	size := fmt.Sprint(info.Size())
 	modTime := info.ModTime().Format(time.RFC3339Nano)
 
@@ -95,9 +98,15 @@ func updateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, erro
 		return false, "", err
 	}
 
-	setXattr(file, alg.AttrName, hash)
-	setXattr(file, Xattr_size, size)
-	setXattr(file, Xattr_modifiedTime, modTime)
+	if err := setXattr(file, alg.AttrName, hash); err != nil {
+		return true, hash, err
+	}
+	if err := setXattr(file, Xattr_size, size); err != nil {
+		return true, hash, err
+	}
+	if err := setXattr(file, Xattr_modifiedTime, modTime); err != nil {
+		return true, hash, err
+	}
 
 	return true, hash, nil
 }
