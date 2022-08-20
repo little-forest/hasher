@@ -71,6 +71,7 @@ func updateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, erro
 	if err != nil {
 		return false, "", err
 	}
+	// nolint:errcheck
 	defer file.Close()
 
 	info, err := file.Stat()
