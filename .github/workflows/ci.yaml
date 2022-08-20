@@ -28,7 +28,7 @@ jobs:
 
       - run: pwd
 
-      - run: .local/share/aquaproj-aqua/bin/aqua g github-comment
+      - run: /home/runner/.local/share/aquaproj-aqua/bin/aqua g github-comment
 
       - name: Setup Go
         uses: actions/setup-go@v3
