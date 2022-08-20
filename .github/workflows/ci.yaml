@@ -45,7 +45,7 @@ jobs:
 
       - name: Hide old comment
         run: github-comment hide --token ${{ secrets.GITHUB_TOKEN }}
-        if: ${{ github.event_name == 'pull_request' || ( github.event_name == 'push' && github.ref_name != 'main' }}
+        if: ${{ github.event_name == 'pull_request' || ( github.event_name == 'push' && github.ref_name != 'main' ) }}
 
       - name: Build 
         run: go build
