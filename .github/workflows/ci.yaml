@@ -19,8 +19,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "$GITHUB_EVENT_NAME"
-
       - name: Checkout
         uses: actions/checkout@v3
 
