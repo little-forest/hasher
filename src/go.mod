@@ -1,6 +1,6 @@
 module littleforest.jp/hasher
 
-go 1.17
+go 1.19
 
 require (
 	github.com/pkg/xattr v0.4.8
