@@ -31,12 +31,18 @@ jobs:
         with:
           go-version: 1.18.5
 
-      - name: Setup GoLangCI-Lint
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s 
+      - name: run GoLangCI-Lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.29
+          working-directory: ./src
 
-      - name: Run GoLangCI-Lint
-        run: ../bin/golangci-lint run --disable-all --enable=govet,errcheck,staticcheck,gosimple 
-        working-directory: ./src
+            #- name: Setup GoLangCI-Lint
+            #  run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s 
+
+            #- name: Run GoLangCI-Lint
+            #  run: ../bin/golangci-lint run -v -c ../.golangci.yaml
+            #  working-directory: ./src
 
       - name: Build 
         run: go build
