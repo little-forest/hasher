@@ -26,6 +26,10 @@ jobs:
         with:
           aqua_version: v1.17.1
 
+      - run: pwd
+
+      - run: .local/share/aquaproj-aqua/bin/aqua g github-comment
+
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
@@ -56,4 +60,5 @@ jobs:
       - name: Build 
         run: go build
         working-directory: ./src
+        if: ${{ always() }}
  
