@@ -31,14 +31,16 @@ jobs:
         with:
           go-version: 1.19
 
-            #- name: Setup GoLangCI-Lint
-            #  run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s 
+      - name: Setup GoLangCI-Lint
+       run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s 
 
-            #- name: Show GoLangCI-Lint version
-            #  run: ./bin/golangci-lint --version | head -n1
+      - name: Show GoLangCI-Lint version
+       run: ./bin/golangci-lint --version | head -n1
 
       - name: Run GoLangCI-Lint
-        run: github-comment exec --token ${{ secrets.GITHUB_TOKEN }} -- golangci-lint run
+        run: >
+          github-comment exec --token ${{ secrets.GITHUB_TOKEN }} --
+          ../bin/golangci-lint run
         working-directory: ./src
 
       - name: Hide old comment
