@@ -40,9 +40,11 @@ jobs:
       - name: Setup GoLangCI-Lint
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s 
 
+          #github-comment exec --org little-forest --repo hasher --token ${{ secrets.GITHUB_TOKEN }} --
       - name: Run GoLangCI-Lint
-        run: github-comment exec --org little-forest --repo hasher --token ${{ secrets.GITHUB_TOKEN }} -- ../bin/golangci-lint run -v
-            #  run: ../bin/golangci-lint run -v -c ../.golangci.yaml
+        run: >
+          github-comment exec --token ${{ secrets.GITHUB_TOKEN }} --
+          ../bin/golangci-lint run -v
         working-directory: ./src
 
       - name: Build 
