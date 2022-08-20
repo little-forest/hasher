@@ -61,7 +61,7 @@ func runCalcHash(cmd *cobra.Command, args []string) (int, error) {
 
 func calcFileHash(path string, alg *HashAlg) (string, error) {
 	r, err := openFile(path)
-	// nolint:staticcheck
+	// nolint:staticcheck,errcheck
 	defer r.Close()
 	if err != nil {
 		return "", err
