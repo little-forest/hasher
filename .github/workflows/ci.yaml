@@ -41,13 +41,16 @@ jobs:
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s 
 
       - name: Show GoLangCI-Lint version
-        run: ./bin/golangci-lint --version
+        run: ./bin/golangci-lint --version | head -n1
 
       - name: Run GoLangCI-Lint
         run: >
           github-comment exec --token ${{ secrets.GITHUB_TOKEN }} --
           ../bin/golangci-lint run
         working-directory: ./src
+
+      - name: Hide old comment
+        run: github-comment hide --token ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build 
         run: go build
