@@ -29,16 +29,26 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.18.5
+          go-version: 1.19
 
       - name: Setup GoLangCI-Lint
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s 
 
+      - name: Show GoLangCI-Lint version
+        run: ./bin/golangci-lint --version | head -n1
+
       - name: Run GoLangCI-Lint
-        run: ../bin/golangci-lint run --disable-all --enable=govet,errcheck,staticcheck,gosimple 
+        run: >
+          github-comment exec --token ${{ secrets.GITHUB_TOKEN }} --
+          ../bin/golangci-lint run
         working-directory: ./src
+
+      - name: Hide old comment
+        run: github-comment hide --token ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ always() }}
 
       - name: Build 
         run: go build
         working-directory: ./src
+        if: ${{ always() }}
  
