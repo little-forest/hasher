@@ -51,6 +51,7 @@ jobs:
 
       - name: Hide old comment
         run: github-comment hide --token ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ always() }}
 
       - name: Build 
         run: go build
