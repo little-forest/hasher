@@ -12,6 +12,7 @@ This repository allows code checking before committing locally by using [`pre\-c
 ```
 pre-commit install
 ```
+3. Install [golangci\-lint](https://github.com/golangci/golangci-lint)
 
 `pre-commit` checks only staged files. If you want to check all files, please do the following.
 
