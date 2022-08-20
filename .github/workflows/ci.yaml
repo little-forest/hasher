@@ -38,9 +38,7 @@ jobs:
             #  run: ./bin/golangci-lint --version | head -n1
 
       - name: Run GoLangCI-Lint
-        run: >
-          github-comment exec --token ${{ secrets.GITHUB_TOKEN }} --
-          ../bin/golangci-lint run
+        run: github-comment exec --token ${{ secrets.GITHUB_TOKEN }} -- golangci-lint run
         working-directory: ./src
 
       - name: Hide old comment
