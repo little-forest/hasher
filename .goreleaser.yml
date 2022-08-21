@@ -9,10 +9,10 @@ builds:
     binary: hasher
     ldflags:
       - -s -w
-      - -X github.com/little-forest/hasher/cmd.Version={{. Version}}
-      - -X github.com/little-forest/hasher/cmd.Revision={{. ShortCommit}}
-      - -X github.com/little-forest/hasher/cmd.Date={{. Date}}
-      - -X github.com/little-forest/hasher/cmd.OsArch={{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}
+      - -X github.com/little-forest/{{.ProjectName}}/cmd.version={{.Version}}
+      - -X github.com/little-forest/{{.ProjectName}}/cmd.revision={{.ShortCommit}}
+      - -X github.com/little-forest/{{.ProjectName}}/cmd.date={{.Date}}
+      - -X github.com/little-forest/{{.ProjectName}}/cmd.osArch={{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}
     env:
       - CGO_ENABLED=0
 archives:
