@@ -25,6 +25,7 @@ var (
 	revision = "dev"
 	version  = "dev"
 	date     = "unknown"
+	osArch   = "unknown"
 )
 
 // versionCmd represents the version command
@@ -39,5 +40,5 @@ func init() {
 }
 
 func runVersion(cmd *cobra.Command, args []string) {
-	fmt.Printf("hasher version %s-%s (built at %s)\n", revision, version, date)
+	fmt.Printf("hasher version %s-%s %s (built at %s)\n", version, revision, osArch, date)
 }
