@@ -9,8 +9,9 @@ builds:
     binary: hasher
     ldflags:
       - -s -w
-      - -X main.Version={{.Version}}
-      - -X main.Revision={{.ShortCommit}}
+      - -X github.com/little-forest/hasher/cmd.version={{.Version}}
+      - -X github.com/little-forest/hasher/cmd.revision={{.ShortCommit}}
+      - -X github.com/little-forest/hasher/cmd.date={{.Date}}
     env:
       - CGO_ENABLED=0
 archives:

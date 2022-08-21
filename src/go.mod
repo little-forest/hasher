@@ -1,4 +1,4 @@
-module littleforest.jp/hasher
+module github.com/little-forest/hasher
 
 go 1.19
 
