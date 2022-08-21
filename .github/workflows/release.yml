@@ -1,4 +1,4 @@
-name: release
+name: Release product
 on:
   push:
     tags:
@@ -14,12 +14,12 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.18.5'
+          go-version: '1.19'
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v3
         with:
           version: latest
-          args: release --rm-dist
+          args: release --rm-dist -f ../.goreleaser.yml
           workdir: src
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
