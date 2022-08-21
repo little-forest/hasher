@@ -13,14 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package cmd
 
 import (
-	_ "crypto/sha1"
+	"fmt"
 
-	"github.com/little-forest/hasher/cmd"
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	cmd.Execute()
+var (
+	revision = "dev"
+	version  = "dev"
+	date     = "unknown"
+)
+
+// versionCmd represents the version command
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "show version",
+	Run:   runVersion,
+}
+
+func init() {
+	rootCmd.AddCommand(versionCmd)
+}
+
+func runVersion(cmd *cobra.Command, args []string) {
+	fmt.Printf("hasher version %s-%s (built at %s)\n", revision, version, date)
 }
