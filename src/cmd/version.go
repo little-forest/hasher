@@ -21,11 +21,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Will be fixed by LDFLAGS
 var (
-	Version  = "dev"
-	Revision = "dev"
-	Date     = "unknown"
-	OsArch   = "unknown"
+	version  = "dev"
+	revision = "dev"
+	date     = "unknown"
+	osArch   = "unknown"
 )
 
 // versionCmd represents the version command
@@ -40,5 +41,5 @@ func init() {
 }
 
 func runVersion(cmd *cobra.Command, args []string) {
-	fmt.Printf("hasher version %s %s built from %s on %s\n", Version, OsArch, Revision, Date)
+	fmt.Printf("hasher version %s %s built from %s on %s\n", version, osArch, revision, date)
 }
