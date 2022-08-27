@@ -17,6 +17,8 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -54,8 +56,13 @@ func showAttributes(path string, hashAlg *HashAlg) error {
 
 	hash := getXattr(f, hashAlg.AttrName)
 	size := getXattr(f, Xattr_size)
-	mTime := getXattr(f, Xattr_modifiedTime)
-	fmt.Printf("%s\t%s\t%s\t%s\n", path, hash, size, mTime)
+
+	mTimeStr := ""
+	mTime, err := strconv.ParseInt(getXattr(f, Xattr_modifiedTime), 10, 64)
+	if err != nil {
+		mTimeStr = time.Unix(0, mTime).Format(time.RFC3339Nano)
+	}
+	fmt.Printf("%s\t%s\t%s\t%s\n", path, hash, size, mTimeStr)
 
 	return nil
 }
