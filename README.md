@@ -20,3 +20,17 @@ pre-commit install
 pre-commit run -a
 ```
 
+## cobra-cli
+
+Install cobra-cli.
+
+```
+go install github.com/spf13/cobra-cli@latest
+```
+
+Make sub-command template.
+
+```
+cd src
+cobra-cli add [SUB_COMMNAD_NAME]
+```
