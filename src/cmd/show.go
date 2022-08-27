@@ -59,7 +59,7 @@ func showAttributes(path string, hashAlg *HashAlg) error {
 
 	mTimeStr := ""
 	mTime, err := strconv.ParseInt(getXattr(f, Xattr_modifiedTime), 10, 64)
-	if err != nil {
+	if err == nil {
 		mTimeStr = time.Unix(0, mTime).Format(time.RFC3339Nano)
 	}
 	fmt.Printf("%s\t%s\t%s\t%s\n", path, hash, size, mTimeStr)
