@@ -102,7 +102,7 @@ func showAttributesRecursively(dirPath string, hashAlg *HashAlg) error {
 		}
 
 		showErr := showAttributes(path, NewDefaultHashAlg(Xattr_prefix))
-		if err != nil {
+		if showErr != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", showErr.Error())
 		}
 
