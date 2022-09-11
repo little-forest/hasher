@@ -17,9 +17,11 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
 	"github.com/pkg/xattr"
 )
 
@@ -42,6 +44,16 @@ func openFile(path string) (*os.File, error) {
 		return nil, fmt.Errorf("failed to open file. : %s", err.Error())
 	}
 	return file, nil
+}
+
+func isDirectory(path string) (bool, error) {
+	info, err := os.Stat(path)
+
+	if err != nil {
+		return false, fmt.Errorf("can't stat file : %s", path)
+	}
+
+	return info.Mode().IsDir(), nil
 }
 
 func getXattr(file *os.File, attrName string) string {
@@ -70,4 +82,44 @@ func cleanPath(path string) (string, error) {
 	}
 	path = os.ExpandEnv(path)
 	return filepath.Clean(path), nil
+}
+
+func countFiles(path string, verbose bool) (int, error) {
+	threshold := 1000
+
+	if verbose {
+		fmt.Printf("Counting files : %s ... ", path)
+		hideCursor()
+	}
+
+	count := 0
+	err := filepath.WalkDir(path, func(path string, info fs.DirEntry, err error) error {
+		if err != nil {
+			return errors.Wrap(err, "failed to filepath.Walk")
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		if verbose && (count%threshold) == 0 {
+			fmt.Printf("\x1b7%d\x1b8", count)
+		}
+		count++
+
+		return nil
+	})
+	if verbose {
+		fmt.Printf("%d\n", count)
+		showCursor()
+	}
+	return count, err
+}
+
+func showCursor() {
+	fmt.Print("\x1b[?25h")
+}
+
+func hideCursor() {
+	fmt.Print("\x1b[?25l")
 }
