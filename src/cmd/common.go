@@ -71,3 +71,11 @@ func cleanPath(path string) (string, error) {
 	path = os.ExpandEnv(path)
 	return filepath.Clean(path), nil
 }
+
+func showCursor() {
+	fmt.Print("\x1b[?25h")
+}
+
+func hideCursor() {
+	fmt.Print("\x1b[?25l")
+}
