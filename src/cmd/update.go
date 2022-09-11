@@ -17,13 +17,17 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"strconv"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 const Flag_Update_ForceUpdate = "force-update"
+const Flag_Update_Recursive = "recursive"
 
 // updateCmd represents the update command
 var updateCmd = &cobra.Command{
@@ -37,30 +41,50 @@ func init() {
 	rootCmd.AddCommand(updateCmd)
 
 	updateCmd.Flags().BoolP(Flag_Update_ForceUpdate, "f", false, "Force update")
+	updateCmd.Flags().BoolP(Flag_Update_Recursive, "r", false, "Recursive update")
 }
 
 func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 	forceUpdate, _ := cmd.Flags().GetBool(Flag_Update_ForceUpdate)
 	verbose, _ := cmd.Flags().GetBool(Flag_root_Verbose)
+	recuesive, _ := cmd.Flags().GetBool(Flag_Update_Recursive)
 
 	alg := NewDefaultHashAlg(Xattr_prefix)
 
 	status := 0
 	var errorStatus error
 	for _, p := range args {
-		changed, hash, err := updateHash(p, alg, forceUpdate)
+		isDir, err := isDirectory(p)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			continue
+		}
+
+		if isDir {
+			if !recuesive {
+				// skip dir
+				fmt.Fprintf(os.Stderr, "Skip directory : %s\n", p)
+				continue
+			}
+			// update directory
+			err = updateHashRecursively(p, alg, forceUpdate, verbose)
+		} else {
+			// update file
+			changed, hash, err := updateHash(p, alg, forceUpdate)
+			if err == nil && verbose {
+				mark := ""
+				if changed {
+					mark = "*"
+				}
+				fmt.Fprintf(os.Stdout, "%s  %s %s\n", p, hash, mark)
+			}
+		}
+
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			errorStatus = err
 			status = 1
 			continue
-		}
-		if verbose {
-			mark := ""
-			if changed {
-				mark = "*"
-			}
-			fmt.Fprintf(os.Stdout, "%s  %s %s\n", p, hash, mark)
 		}
 	}
 	return status, errorStatus
@@ -110,4 +134,43 @@ func updateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, erro
 	}
 
 	return true, hash, nil
+}
+
+func updateHashRecursively(dirPath string, alg *HashAlg, forceUpdate bool, verbose bool) error {
+	totalCount, err := countFiles(dirPath, verbose)
+	if err != nil {
+		return err
+	}
+
+	count := 1
+
+	if verbose {
+		hideCursor()
+	}
+	err = filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, err error) error {
+		if err != nil {
+			return errors.Wrap(err, "failed to filepath.Walk")
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		if verbose {
+			fmt.Printf("\x1b7\x1b[0J%d/%d %s\x1b8", count, totalCount, path)
+		}
+		_, _, updateErr := updateHash(path, alg, forceUpdate)
+		if updateErr != nil {
+			fmt.Fprintf(os.Stderr, "\nFailed to update hash : %s (reason : %s)\n", path, updateErr.Error())
+		}
+		count++
+
+		return nil
+	})
+	if verbose {
+		fmt.Printf("\n")
+		showCursor()
+	}
+
+	return err
 }
