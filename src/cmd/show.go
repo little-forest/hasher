@@ -17,9 +17,13 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -36,11 +40,31 @@ func init() {
 }
 
 func runShow(cmd *cobra.Command, args []string) (int, error) {
+	recuesive, _ := cmd.Flags().GetBool(Flag_root_Recursive)
+
+	alg := NewDefaultHashAlg(Xattr_prefix)
+
 	status := 0
 	var errResult error
-	for _, v := range args {
-		err := showAttributes(v, NewDefaultHashAlg(Xattr_prefix))
+	for _, p := range args {
+		isDir, err := isDirectory(p)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			continue
+		}
+
+		if isDir {
+			if !recuesive {
+				// skip dir
+				fmt.Fprintf(os.Stderr, "Skip directory : %s\n", p)
+				continue
+			}
+			err = showAttributesRecursively(p, alg)
+		} else {
+			err = showAttributes(p, alg)
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			status = 1
 			errResult = err
 		}
@@ -65,4 +89,24 @@ func showAttributes(path string, hashAlg *HashAlg) error {
 	fmt.Printf("%s\t%s\t%s\t%s\n", path, hash, size, mTimeStr)
 
 	return nil
+}
+
+func showAttributesRecursively(dirPath string, hashAlg *HashAlg) error {
+	err := filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, err error) error {
+		if err != nil {
+			return errors.Wrap(err, "failed to filepath.Walk")
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		showErr := showAttributes(path, NewDefaultHashAlg(Xattr_prefix))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", showErr.Error())
+		}
+
+		return nil
+	})
+	return err
 }

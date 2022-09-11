@@ -27,7 +27,6 @@ import (
 )
 
 const Flag_Update_ForceUpdate = "force-update"
-const Flag_Update_Recursive = "recursive"
 
 // updateCmd represents the update command
 var updateCmd = &cobra.Command{
@@ -41,13 +40,12 @@ func init() {
 	rootCmd.AddCommand(updateCmd)
 
 	updateCmd.Flags().BoolP(Flag_Update_ForceUpdate, "f", false, "Force update")
-	updateCmd.Flags().BoolP(Flag_Update_Recursive, "r", false, "Recursive update")
 }
 
 func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 	forceUpdate, _ := cmd.Flags().GetBool(Flag_Update_ForceUpdate)
 	verbose, _ := cmd.Flags().GetBool(Flag_root_Verbose)
-	recuesive, _ := cmd.Flags().GetBool(Flag_Update_Recursive)
+	recuesive, _ := cmd.Flags().GetBool(Flag_root_Recursive)
 
 	alg := NewDefaultHashAlg(Xattr_prefix)
 
