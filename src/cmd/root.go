@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,6 +26,7 @@ const Xattr_size = Xattr_prefix + ".size"
 const Xattr_modifiedTime = Xattr_prefix + ".mtime"
 
 const Flag_root_Verbose = "verbose"
+const Flag_root_Recursive = "recursive"
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -49,4 +50,5 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().BoolP(Flag_root_Verbose, "v", false, "verbose")
+	rootCmd.PersistentFlags().BoolP(Flag_root_Recursive, "r", false, "recursive")
 }
