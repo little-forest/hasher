@@ -88,6 +88,11 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 	return status, errorStatus
 }
 
+// Update specified file's hash value
+//
+//	changed : bool
+//	hash value : string
+//	error : error
 func updateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, error) {
 	file, err := openFile(path)
 	if err != nil {

@@ -21,9 +21,27 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/morikuni/aec"
 	"github.com/pkg/errors"
 	"github.com/pkg/xattr"
 )
+
+// ANSI escape sequences
+//
+//	see: https://github.com/morikuni/aec
+var C_green = aec.EmptyBuilder.GreenF().Bold().ANSI
+var C_red = aec.EmptyBuilder.RedF().Bold().ANSI
+var C_lred = aec.EmptyBuilder.LightRedF().ANSI
+var C_blue = aec.EmptyBuilder.BlueF().Bold().ANSI
+var C_yellow = aec.EmptyBuilder.YellowF().Bold().ANSI
+var C_cyan = aec.EmptyBuilder.CyanF().Bold().ANSI
+var C_white = aec.EmptyBuilder.WhiteF().Bold().ANSI
+
+var C_pink = aec.EmptyBuilder.Color8BitF(218).ANSI
+var C_malibu = aec.EmptyBuilder.Color8BitF(74).ANSI
+var C_orange = aec.EmptyBuilder.Color8BitF(214).ANSI
+var C_darkorange3 = aec.EmptyBuilder.Color8BitF(166).ANSI
+var C_lime = aec.EmptyBuilder.Color8BitF(10).ANSI
 
 func openFile(path string) (*os.File, error) {
 	info, err := os.Stat(path)
@@ -32,7 +50,7 @@ func openFile(path string) (*os.File, error) {
 	}
 
 	if info.Mode().IsDir() {
-		return nil, fmt.Errorf("directory : %s", path)
+		return nil, fmt.Errorf("directory can't open : %s", path)
 	}
 
 	if !info.Mode().IsRegular() {
