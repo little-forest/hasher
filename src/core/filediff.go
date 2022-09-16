@@ -56,6 +56,10 @@ func (d DirDiff) Get(fileName string) *FileDiff {
 	return d.files[fileName]
 }
 
+func (d DirDiff) Count() int {
+	return len(d.files)
+}
+
 func NewDirDiff(dirPath string, alg *HashAlg) (*DirDiff, error) {
 	dir, err := os.Open(dirPath)
 	if err != nil {
