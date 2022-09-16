@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/hex"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,9 +16,20 @@ func TestNewFileDiff(t *testing.T) {
 	d, err := NewFileDiff(path, alg)
 
 	assert.NoError(t, err)
-	assert.Equal(t, path, d.FileName)
+	assert.Equal(t, filepath.Base(path), d.Basename)
 	assert.Equal(t, "", d.PairFileName)
+	assert.Equal(t, UNKNOWN, d.Status)
 	assert.Equal(t, loadHashDataToByteArray(t, basename, alg.AlgName), d.HashValue)
+}
+
+func TestNewDirDiff(t *testing.T) {
+	alg := NewDefaultHashAlg()
+
+	_, err := NewDirDiff("testdata", alg)
+	assert.NoError(t, err)
+	// assert.NotNil(t, d.Get("testdata01.txt"))
+	// assert.NotNil(t, d.Get("testdata02.txt"))
+	// assert.NotNil(t, d.Get("testdata03.txt"))
 }
 
 func loadHashDataToByteArray(t *testing.T, basename string, algName string) []byte {
