@@ -1,4 +1,4 @@
-package cmd
+package core
 
 import (
 	"bufio"
@@ -11,9 +11,9 @@ import (
 
 func TestCalcFileHash(t *testing.T) {
 	basename := "testdata01"
-	hashAlg := NewDefaultHashAlg("")
+	hashAlg := NewDefaultHashAlg()
 
-	hash, err := calcFileHash(fmt.Sprintf("testdata/%s.txt", basename), hashAlg)
+	hash, err := CalcFileHash(fmt.Sprintf("testdata/%s.txt", basename), hashAlg)
 
 	expectedHash := loadHashData(t, basename, hashAlg.AlgName)
 	assert.NoError(t, err)
@@ -21,15 +21,15 @@ func TestCalcFileHash(t *testing.T) {
 }
 
 func TestCalcFileHash_failed(t *testing.T) {
-	hashAlg := NewDefaultHashAlg("")
+	hashAlg := NewDefaultHashAlg()
 
-	_, err := calcFileHash("dummy", hashAlg)
+	_, err := CalcFileHash("dummy", hashAlg)
 	assert.Error(t, err)
 }
 
 func TestCalcHashString(t *testing.T) {
 	basename := "testdata01"
-	hashAlg := NewDefaultHashAlg("")
+	hashAlg := NewDefaultHashAlg()
 
 	f := openTestData(t, basename)
 	//nolint:errcheck

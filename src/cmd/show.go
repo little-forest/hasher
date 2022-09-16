@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"time"
 
+	. "github.com/little-forest/hasher/common"
+	"github.com/little-forest/hasher/core"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -42,12 +44,12 @@ func init() {
 func runShow(cmd *cobra.Command, args []string) (int, error) {
 	recuesive, _ := cmd.Flags().GetBool(Flag_root_Recursive)
 
-	alg := NewDefaultHashAlg(Xattr_prefix)
+	alg := core.NewDefaultHashAlg()
 
 	status := 0
 	var errResult error
 	for _, p := range args {
-		isDir, err := isDirectory(p)
+		isDir, err := IsDirectory(p)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			continue
@@ -72,17 +74,17 @@ func runShow(cmd *cobra.Command, args []string) (int, error) {
 	return status, errResult
 }
 
-func showAttributes(path string, hashAlg *HashAlg) error {
-	f, err := openFile(path)
+func showAttributes(path string, hashAlg *core.HashAlg) error {
+	f, err := OpenFile(path)
 	if err != nil {
 		return err
 	}
 
-	hash := getXattr(f, hashAlg.AttrName)
-	size := getXattr(f, Xattr_size)
+	hash := core.GetXattr(f, hashAlg.AttrName)
+	size := core.GetXattr(f, core.Xattr_size)
 
 	mTimeStr := ""
-	mTime, err := strconv.ParseInt(getXattr(f, Xattr_modifiedTime), 10, 64)
+	mTime, err := strconv.ParseInt(core.GetXattr(f, core.Xattr_modifiedTime), 10, 64)
 	if err == nil {
 		mTimeStr = time.Unix(0, mTime).Format(time.RFC3339Nano)
 	}
@@ -91,7 +93,7 @@ func showAttributes(path string, hashAlg *HashAlg) error {
 	return nil
 }
 
-func showAttributesRecursively(dirPath string, hashAlg *HashAlg) error {
+func showAttributesRecursively(dirPath string, hashAlg *core.HashAlg) error {
 	err := filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to filepath.Walk")
@@ -101,7 +103,7 @@ func showAttributesRecursively(dirPath string, hashAlg *HashAlg) error {
 			return nil
 		}
 
-		showErr := showAttributes(path, NewDefaultHashAlg(Xattr_prefix))
+		showErr := showAttributes(path, core.NewDefaultHashAlg())
 		if showErr != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", showErr.Error())
 		}

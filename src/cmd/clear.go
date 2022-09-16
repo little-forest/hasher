@@ -20,11 +20,12 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/pkg/xattr"
 	"github.com/spf13/cobra"
+
+	. "github.com/little-forest/hasher/common"
+	"github.com/little-forest/hasher/core"
 )
 
 // clearCmd represents the clear command
@@ -46,7 +47,7 @@ func runClear(cmd *cobra.Command, args []string) (int, error) {
 	status := 0
 	var errResult error
 	for _, p := range args {
-		isDir, err := isDirectory(p)
+		isDir, err := IsDirectory(p)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			continue
@@ -72,28 +73,15 @@ func runClear(cmd *cobra.Command, args []string) (int, error) {
 }
 
 func clear(path string) error {
-	file, err := openFile(path)
+	file, err := OpenFile(path)
 	if err != nil {
 		return err
 	}
-
-	attrNames, err := xattr.FList(file)
-	if err != nil {
-		return err
-	}
-
-	for _, attrName := range attrNames {
-		if strings.HasPrefix(attrName, Xattr_prefix) {
-			if err := removeXattr(file, attrName); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+	return core.ClearXattr(file)
 }
 
 func clearRecursively(dirPath string, verbose bool) error {
-	totalCount, err := countFiles(dirPath, verbose)
+	totalCount, err := CountFiles(dirPath, verbose)
 	if err != nil {
 		return err
 	}
@@ -101,7 +89,7 @@ func clearRecursively(dirPath string, verbose bool) error {
 	count := 1
 
 	if verbose {
-		hideCursor()
+		HideCursor()
 	}
 	err = filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
@@ -125,7 +113,7 @@ func clearRecursively(dirPath string, verbose bool) error {
 	})
 	if verbose {
 		fmt.Printf("\n")
-		showCursor()
+		ShowCursor()
 	}
 	return err
 }

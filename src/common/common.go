@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package common
 
 import (
 	"fmt"
@@ -23,7 +23,6 @@ import (
 
 	"github.com/morikuni/aec"
 	"github.com/pkg/errors"
-	"github.com/pkg/xattr"
 )
 
 // ANSI escape sequences
@@ -43,7 +42,7 @@ var C_orange = aec.EmptyBuilder.Color8BitF(214).ANSI
 var C_darkorange3 = aec.EmptyBuilder.Color8BitF(166).ANSI
 var C_lime = aec.EmptyBuilder.Color8BitF(10).ANSI
 
-func openFile(path string) (*os.File, error) {
+func OpenFile(path string) (*os.File, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, fmt.Errorf("can't stat file : %s", path)
@@ -64,7 +63,7 @@ func openFile(path string) (*os.File, error) {
 	return file, nil
 }
 
-func isDirectory(path string) (bool, error) {
+func IsDirectory(path string) (bool, error) {
 	info, err := os.Stat(path)
 
 	if err != nil {
@@ -74,23 +73,7 @@ func isDirectory(path string) (bool, error) {
 	return info.Mode().IsDir(), nil
 }
 
-func getXattr(file *os.File, attrName string) string {
-	v, err := xattr.FGet(file, attrName)
-	if err != nil {
-		return ""
-	}
-	return string(v)
-}
-
-func setXattr(file *os.File, attrName string, value string) error {
-	return xattr.FSet(file, attrName, []byte(value))
-}
-
-func removeXattr(file *os.File, attrName string) error {
-	return xattr.FRemove(file, attrName)
-}
-
-func cleanPath(path string) (string, error) {
+func CleanPath(path string) (string, error) {
 	if len(path) > 1 && path[0:2] == "~/" {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
@@ -102,12 +85,12 @@ func cleanPath(path string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
-func countFiles(path string, verbose bool) (int, error) {
+func CountFiles(path string, verbose bool) (int, error) {
 	threshold := 1000
 
 	if verbose {
 		fmt.Printf("Counting files : %s ... ", path)
-		hideCursor()
+		HideCursor()
 	}
 
 	count := 0
@@ -129,15 +112,15 @@ func countFiles(path string, verbose bool) (int, error) {
 	})
 	if verbose {
 		fmt.Printf("%d\n", count)
-		showCursor()
+		ShowCursor()
 	}
 	return count, err
 }
 
-func showCursor() {
+func ShowCursor() {
 	fmt.Print("\x1b[?25h")
 }
 
-func hideCursor() {
+func HideCursor() {
 	fmt.Print("\x1b[?25l")
 }

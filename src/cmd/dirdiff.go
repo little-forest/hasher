@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 
 	mapset "github.com/deckarep/golang-set/v2"
+	. "github.com/little-forest/hasher/common"
+	"github.com/little-forest/hasher/core"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -49,8 +51,11 @@ func runDirDiff(cmd *cobra.Command, args []string) (int, error) {
 	return status, err
 }
 
+func singleDirDiff() {
+}
+
 func checkDirectory(path string) error {
-	isDir, err := isDirectory(path)
+	isDir, err := IsDirectory(path)
 	if err != nil {
 		return err
 	}
@@ -64,9 +69,9 @@ func dirDiff(basePath string, targetPath string, verbose bool) (int, error) {
 	basePath = filepath.Clean(basePath)
 	targetPath = filepath.Clean(targetPath)
 
-	alg := NewDefaultHashAlg(Xattr_prefix)
+	alg := core.NewDefaultHashAlg()
 
-	totalCount, err := countFiles(basePath, verbose)
+	totalCount, err := CountFiles(basePath, verbose)
 	if err != nil {
 		return 1, err
 	}
@@ -75,7 +80,7 @@ func dirDiff(basePath string, targetPath string, verbose bool) (int, error) {
 	targetList, _ := getTargetList(targetPath)
 
 	if verbose {
-		hideCursor()
+		HideCursor()
 	}
 	err = filepath.WalkDir(basePath, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
@@ -116,7 +121,7 @@ func dirDiff(basePath string, targetPath string, verbose bool) (int, error) {
 }
 
 // return true if target file/directory exists
-func checkExistence(srcPath string, targetPath string, alg *HashAlg) (bool, error) {
+func checkExistence(srcPath string, targetPath string, alg *core.HashAlg) (bool, error) {
 	info, err := os.Stat(targetPath)
 	exists := (err == nil)
 
@@ -164,13 +169,13 @@ func checkExistence(srcPath string, targetPath string, alg *HashAlg) (bool, erro
 // Compare hash value of givven files.
 // Two files are assumed to exist.
 // return true if two files are same.
-func compareHash(alg *HashAlg, path1 string, path2 string) (bool, error) {
-	_, hash1, err := updateHash(path1, alg, false)
+func compareHash(alg *core.HashAlg, path1 string, path2 string) (bool, error) {
+	_, hash1, err := core.UpdateHash(path1, alg, false)
 	if err != nil {
 		return false, err
 	}
 
-	_, hash2, err := updateHash(path2, alg, false)
+	_, hash2, err := core.UpdateHash(path2, alg, false)
 	if err != nil {
 		return false, err
 	}
