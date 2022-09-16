@@ -1,9 +1,7 @@
 package core
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,31 +38,4 @@ func TestCalcHashString(t *testing.T) {
 	expectedHash := loadHashData(t, basename, hashAlg.AlgName)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedHash, hash)
-}
-
-func openTestData(t *testing.T, basename string) *os.File {
-	f, err := os.Open(fmt.Sprintf("testdata/%s.txt", basename))
-	if err != nil {
-		t.Errorf("failed to open. : %v", err)
-	}
-	return f
-}
-
-func loadHashData(t *testing.T, basename string, algName string) string {
-	f, err := os.Open(fmt.Sprintf("testdata/%s.%s", basename, algName))
-	if err != nil {
-		t.Errorf("%v", f)
-	}
-	//nolint:errcheck
-	defer f.Close()
-
-	hash := ""
-	s := bufio.NewScanner(f)
-
-	if s.Scan() {
-		// read first line
-		hash = s.Text()
-	}
-
-	return hash
 }
