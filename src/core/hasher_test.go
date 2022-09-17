@@ -1,41 +1,58 @@
 package core
 
 import (
-	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCalcFileHash(t *testing.T) {
-	basename := "testdata01"
-	hashAlg := NewDefaultHashAlg()
+func TestUpdateHash(t *testing.T) {
+	alg := NewDefaultHashAlg()
+	path, expectedHash := makeSingleDummyFile(t, &alg.Alg)
 
-	hash, err := CalcFileHash(fmt.Sprintf("testdata/%s.txt", basename), hashAlg)
+	changed, hash, err := UpdateHash(path, alg, false)
 
-	expectedHash := loadHashData(t, basename, hashAlg.AlgName)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedHash, hash)
+	assert.True(t, changed)
+	// f, err := os.Open(path)
+	// assert.NoError(t, err)
+
+	// // check if hash value is saved to xattr
+	// attrHash := GetXattr(f, alg.AttrName)
+	// assert.Equal(t, expectedHashValue, attrHash)
+}
+
+func TestCalcFileHash(t *testing.T) {
+	alg := NewDefaultHashAlg()
+	path, expectedHashValue := makeSingleDummyFile(t, &alg.Alg)
+
+	hash, err := CalcFileHash(path, alg)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedHashValue, hash)
 }
 
 func TestCalcFileHash_failed(t *testing.T) {
-	hashAlg := NewDefaultHashAlg()
+	alg := NewDefaultHashAlg()
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "dummy.txt")
 
-	_, err := CalcFileHash("dummy", hashAlg)
+	_, err := CalcFileHash(path, alg)
 	assert.Error(t, err)
 }
 
 func TestCalcHashString(t *testing.T) {
-	basename := "testdata01"
-	hashAlg := NewDefaultHashAlg()
+	alg := NewDefaultHashAlg()
+	path, expectedHashValue := makeSingleDummyFile(t, &alg.Alg)
 
-	f := openTestData(t, basename)
+	f, err := os.Open(path)
+	assert.NoError(t, err)
 	//nolint:errcheck
 	defer f.Close()
 
-	hash, err := calcHashString(f, hashAlg)
-
-	expectedHash := loadHashData(t, basename, hashAlg.AlgName)
+	hash, err := calcHashString(f, alg)
 	assert.NoError(t, err)
-	assert.Equal(t, expectedHash, hash)
+	assert.Equal(t, expectedHashValue, hash)
 }

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/hex"
 	"path/filepath"
 	"testing"
 
@@ -8,9 +9,9 @@ import (
 )
 
 func TestNewFileDiff(t *testing.T) {
-	basename := "testdata01"
-	path := "testdata/testdata01.txt"
 	alg := NewDefaultHashAlg()
+	path, expectedHashValue := makeSingleDummyFile(t, &alg.Alg)
+	expectedHashBytes, _ := hex.DecodeString(expectedHashValue)
 
 	d, err := NewFileDiff(path, alg)
 
@@ -18,5 +19,5 @@ func TestNewFileDiff(t *testing.T) {
 	assert.Equal(t, filepath.Base(path), d.Basename)
 	assert.Equal(t, "", d.PairFileName)
 	assert.Equal(t, UNKNOWN, d.Status)
-	assert.Equal(t, loadHashDataToByteArray(t, basename, alg.AlgName), d.HashValue)
+	assert.Equal(t, expectedHashBytes, d.HashValue)
 }

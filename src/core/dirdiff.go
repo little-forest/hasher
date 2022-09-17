@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -20,6 +21,12 @@ func (d DirDiff) Get(fileName string) *FileDiff {
 
 func (d DirDiff) Count() int {
 	return len(d.files)
+}
+
+func (me *DirDiff) Compare(other *DirDiff) {
+	for basename := range me.files {
+		fmt.Printf("bn : %s\n", basename)
+	}
 }
 
 func NewDirDiff(dirPath string, alg *HashAlg) (*DirDiff, error) {
