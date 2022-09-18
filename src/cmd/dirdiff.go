@@ -1,3 +1,18 @@
+/*
+Copyright © 2022 Yusuke KOMORI
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package cmd
 
 import (
@@ -8,6 +23,8 @@ import (
 	"github.com/morikuni/aec"
 	"github.com/spf13/cobra"
 )
+
+const Flag_DirDiff_showOnlyDifferences = "show-only-differences"
 
 // dirdiffCmd represents the dirdiff command
 var dirdiffCmd = &cobra.Command{
@@ -30,13 +47,11 @@ Each files are compared using hash values.
 
 func init() {
 	rootCmd.AddCommand(dirdiffCmd)
+
+	dirdiffCmd.Flags().BoolP(Flag_DirDiff_showOnlyDifferences, "d", false, "Show only differences")
 }
 
 func runDirDiff(cmd *cobra.Command, args []string) (int, error) {
-	if len(args) < 2 {
-		return 1, fmt.Errorf("too few argumrnts")
-	}
-
 	path1 := args[0]
 	path2 := args[1]
 
@@ -47,12 +62,14 @@ func runDirDiff(cmd *cobra.Command, args []string) (int, error) {
 		return 1, err
 	}
 
-	status, err := dirDiff(path1, path2, true)
+	showOnlyDiff, _ := cmd.Flags().GetBool(Flag_DirDiff_showOnlyDifferences)
+
+	status, err := dirDiff(path1, path2, showOnlyDiff, true)
 
 	return status, err
 }
 
-func dirDiff(basePath string, targetPath string, verbose bool) (int, error) {
+func dirDiff(basePath string, targetPath string, showOnlyDiff bool, verbose bool) (int, error) {
 	// diff
 	dirPairs, err := core.DirDiffRecursively(basePath, targetPath)
 
@@ -60,25 +77,30 @@ func dirDiff(basePath string, targetPath string, verbose bool) (int, error) {
 	for _, pair := range dirPairs {
 		if pair.Status == core.BASE_ONLY {
 			fmt.Println(C_cyan.Apply(fmt.Sprintf("[+] %s", pair.Path())))
-			displayDir(pair.Base)
+			displayDir(pair.Base, showOnlyDiff)
 		} else if pair.Status == core.TARGET_ONLY {
 			fmt.Println(C_pink.Apply(fmt.Sprintf("[-] %s", pair.Path())))
-			displayDir(pair.Target)
+			displayDir(pair.Target, showOnlyDiff)
 		} else {
 			// same
-			if pair.Base.IsAllSame() {
+			if pair.Base.IsAllSame() && !showOnlyDiff {
 				fmt.Println(C_gray.Apply(fmt.Sprintf("[=] %s", pair.Path())))
 			} else {
 				fmt.Printf("    %s\n", pair.Path())
 			}
-			displayDir(pair.Base)
+			displayDir(pair.Base, showOnlyDiff)
 		}
 	}
+
+	// RESULT
 	return 0, err
 }
 
-func displayDir(d *core.DirDiff) {
+func displayDir(d *core.DirDiff, showOnlyDiff bool) {
 	for _, f := range d.GetSortedChildren() {
+		if showOnlyDiff && f.Status == core.SAME {
+			continue
+		}
 		col := getColorByStatus(f.Status)
 
 		msg := col.Apply(fmt.Sprintf("      %s %s", f.StatusMark(), f.Basename))
