@@ -13,6 +13,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func assertFileDiff(t *testing.T, expectedBaseName string, expectedStatus DiffStatus, expectedPairName string, actual *FileDiff) {
+	t.Helper()
+	t.Logf("%s/%s %s %s", actual.Parent.Path, actual.Basename, actual.StatusMark(), actual.PairFileName)
+	assert.Equal(t, expectedBaseName, actual.Basename)
+	assert.Equal(t, expectedStatus, actual.Status)
+	assert.Equal(t, expectedPairName, actual.PairFileName)
+}
+
 func copyFile(t *testing.T, srcDir string, dstDir string, filename string) {
 	t.Helper()
 
@@ -28,7 +36,43 @@ func copyFile(t *testing.T, srcDir string, dstDir string, filename string) {
 
 	_, err = io.Copy(dst, src)
 	assert.NoError(t, err)
+
+	// touch timestamp(mtime) same as source file
+	srcInfo, _ := src.Stat()
+	// nolint:errcheck
+	os.Chtimes(dst.Name(), time.Now(), srcInfo.ModTime())
 }
+
+// Set the delta duration for mtime of path2 to path1
+func touchDelta(t *testing.T, path1 string, path2 string, delta time.Duration) {
+	t.Helper()
+
+	stat2, err := os.Stat(path2)
+	assert.NoError(t, err)
+
+	// nolint:errcheck
+	os.Chtimes(path1, time.Now(), stat2.ModTime().Add(delta))
+}
+
+// // Make path1 file's modtime newer than path2 file.
+// func touchNewer(t *testing.T, path1 string, path2 string) {
+// 	t.Helper()
+//
+// 	stat2, err := os.Stat(path2)
+// 	assert.NoError(t, err)
+//
+// 	os.Chtimes(path1, time.Now(), stat2.ModTime().Add(time.Minute))
+// }
+//
+// // Make path1 file's modtime older than path2 file.
+// func touchOlder(t *testing.T, path1 string, path2 string) {
+// 	t.Helper()
+//
+// 	stat2, err := os.Stat(path2)
+// 	assert.NoError(t, err)
+//
+// 	os.Chtimes(path1, time.Now(), stat2.ModTime().Sub(time.Minute))
+// }
 
 // Make dummy file and returns it's hash value.
 func makeDummyFile(t *testing.T, path string, alg *crypto.Hash) string {
