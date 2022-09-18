@@ -46,6 +46,8 @@ func runShow(cmd *cobra.Command, args []string) (int, error) {
 
 	alg := core.NewDefaultHashAlg()
 
+	showHeader()
+
 	status := 0
 	var errResult error
 	for _, p := range args {
@@ -83,14 +85,25 @@ func showAttributes(path string, hashAlg *core.HashAlg) error {
 	hash := core.GetXattr(f, hashAlg.AttrName)
 	size := core.GetXattr(f, core.Xattr_size)
 
-	mTimeStr := ""
-	mTime, err := strconv.ParseInt(core.GetXattr(f, core.Xattr_modifiedTime), 10, 64)
-	if err == nil {
-		mTimeStr = time.Unix(0, mTime).Format(time.RFC3339Nano)
-	}
-	fmt.Printf("%s\t%s\t%s\t%s\n", path, hash, size, mTimeStr)
+	mTime := getUnixTimeNano(f, core.Xattr_modifiedTime)
+	hTime := getUnixTimeNano(f, core.Xattr_hashCheckedTime)
+
+	fmt.Printf("%s\t%s\t%s\t%s\t%s\n", path, hash, size, mTime, hTime)
 
 	return nil
+}
+
+func showHeader() {
+	fmt.Println("Path\tHashValue\tSize\tModTime\tCheckedTime")
+}
+
+func getUnixTimeNano(f *os.File, attrName string) string {
+	timeStr := ""
+	t, err := strconv.ParseInt(core.GetXattr(f, attrName), 10, 64)
+	if err == nil {
+		timeStr = time.Unix(0, t).Format(time.RFC3339Nano)
+	}
+	return timeStr
 }
 
 func showAttributesRecursively(dirPath string, hashAlg *core.HashAlg) error {
