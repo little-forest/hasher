@@ -28,13 +28,15 @@ import (
 // ANSI escape sequences
 //
 //	see: https://github.com/morikuni/aec
-var C_green = aec.EmptyBuilder.GreenF().Bold().ANSI
-var C_red = aec.EmptyBuilder.RedF().Bold().ANSI
+var C_default = aec.EmptyBuilder.DefaultF().ANSI
+var C_green = aec.EmptyBuilder.GreenF().ANSI
+var C_red = aec.EmptyBuilder.RedF().ANSI
 var C_lred = aec.EmptyBuilder.LightRedF().ANSI
-var C_blue = aec.EmptyBuilder.BlueF().Bold().ANSI
-var C_yellow = aec.EmptyBuilder.YellowF().Bold().ANSI
-var C_cyan = aec.EmptyBuilder.CyanF().Bold().ANSI
-var C_white = aec.EmptyBuilder.WhiteF().Bold().ANSI
+var C_blue = aec.EmptyBuilder.BlueF().ANSI
+var C_yellow = aec.EmptyBuilder.YellowF().ANSI
+var C_cyan = aec.EmptyBuilder.CyanF().ANSI
+var C_white = aec.EmptyBuilder.WhiteF().ANSI
+var C_gray = aec.EmptyBuilder.Color8BitF(8).ANSI
 
 var C_pink = aec.EmptyBuilder.Color8BitF(218).ANSI
 var C_malibu = aec.EmptyBuilder.Color8BitF(74).ANSI

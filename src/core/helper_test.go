@@ -112,7 +112,6 @@ func makeSingleDummyFile(t *testing.T, alg *crypto.Hash) (string, string) {
 	path := filepath.Join(tmpDir, randomString(10))
 	hash := makeDummyFile(t, path, alg)
 
-	fmt.Printf("dummy: %s\n", path)
 	return path, hash
 }
 
