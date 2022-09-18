@@ -3,7 +3,9 @@ package core
 import (
 	"fmt"
 	"io"
+	"os"
 	"strconv"
+	"time"
 
 	. "github.com/little-forest/hasher/common"
 )
@@ -11,8 +13,15 @@ import (
 const hashBufSize = 256 * 1024
 
 const Xattr_prefix = "user.hasher"
+
+// File size when hash is updated
 const Xattr_size = Xattr_prefix + ".size"
+
+// File modification time when hash is updated
 const Xattr_modifiedTime = Xattr_prefix + ".mtime"
+
+// Time of hash update
+const Xattr_hashCheckedTime = Xattr_prefix + ".htime"
 
 // Update specified file's hash value
 //
@@ -37,22 +46,31 @@ func UpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, erro
 	var changed bool
 	curHash := GetXattr(file, alg.AttrName)
 	if curHash != "" {
+		// check if existing hash value is valid
+		// If the file size and modtime have not changed, it is considered correct.
 		if curSize := GetXattr(file, Xattr_size); size != curSize {
 			changed = true
 		} else if curMtime := GetXattr(file, Xattr_modifiedTime); modTime != curMtime {
 			changed = true
 		}
 		if !forceUpdate && !changed {
-			return false, curHash, nil
+			// update only checked time
+			err := updateHashCheckedTime(file)
+			return false, curHash, err
 		}
 	}
 
+	// do calculate hash value
 	hash, err := calcHashString(file, alg)
 	if err != nil {
 		return false, "", err
 	}
 
+	// update attributes
 	if err := SetXattr(file, alg.AttrName, hash); err != nil {
+		return true, hash, err
+	}
+	if err := updateHashCheckedTime(file); err != nil {
 		return true, hash, err
 	}
 	if err := SetXattr(file, Xattr_size, size); err != nil {
@@ -63,6 +81,14 @@ func UpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, erro
 	}
 
 	return true, hash, nil
+}
+
+func updateHashCheckedTime(f *os.File) error {
+	htime := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
+	if err := SetXattr(f, Xattr_hashCheckedTime, htime); err != nil {
+		return err
+	}
+	return nil
 }
 
 func CalcFileHash(path string, alg *HashAlg) (string, error) {
