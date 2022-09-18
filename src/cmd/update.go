@@ -20,8 +20,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 
+	. "github.com/little-forest/hasher/common"
+	"github.com/little-forest/hasher/core"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -47,12 +48,12 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 	verbose, _ := cmd.Flags().GetBool(Flag_root_Verbose)
 	recuesive, _ := cmd.Flags().GetBool(Flag_root_Recursive)
 
-	alg := NewDefaultHashAlg(Xattr_prefix)
+	alg := core.NewDefaultHashAlg()
 
 	status := 0
 	var errorStatus error
 	for _, p := range args {
-		isDir, err := isDirectory(p)
+		isDir, err := IsDirectory(p)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			continue
@@ -68,7 +69,7 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 			err = updateHashRecursively(p, alg, forceUpdate, verbose)
 		} else {
 			// update file
-			changed, hash, err := updateHash(p, alg, forceUpdate)
+			changed, hash, err := core.UpdateHash(p, alg, forceUpdate)
 			if err == nil && verbose {
 				mark := ""
 				if changed {
@@ -88,54 +89,8 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 	return status, errorStatus
 }
 
-func updateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, error) {
-	file, err := openFile(path)
-	if err != nil {
-		return false, "", err
-	}
-	// nolint:errcheck
-	defer file.Close()
-
-	info, err := file.Stat()
-	if err != nil {
-		return false, "", err
-	}
-	size := fmt.Sprint(info.Size())
-	modTime := strconv.FormatInt(info.ModTime().UnixNano(), 10)
-
-	var changed bool
-	curHash := getXattr(file, alg.AttrName)
-	if curHash != "" {
-		if curSize := getXattr(file, Xattr_size); size != curSize {
-			changed = true
-		} else if curMtime := getXattr(file, Xattr_modifiedTime); modTime != curMtime {
-			changed = true
-		}
-		if !forceUpdate && !changed {
-			return false, curHash, nil
-		}
-	}
-
-	hash, err := calcHashString(file, alg)
-	if err != nil {
-		return false, "", err
-	}
-
-	if err := setXattr(file, alg.AttrName, hash); err != nil {
-		return true, hash, err
-	}
-	if err := setXattr(file, Xattr_size, size); err != nil {
-		return true, hash, err
-	}
-	if err := setXattr(file, Xattr_modifiedTime, modTime); err != nil {
-		return true, hash, err
-	}
-
-	return true, hash, nil
-}
-
-func updateHashRecursively(dirPath string, alg *HashAlg, forceUpdate bool, verbose bool) error {
-	totalCount, err := countFiles(dirPath, verbose)
+func updateHashRecursively(dirPath string, alg *core.HashAlg, forceUpdate bool, verbose bool) error {
+	totalCount, err := CountFiles(dirPath, verbose)
 	if err != nil {
 		return err
 	}
@@ -143,7 +98,7 @@ func updateHashRecursively(dirPath string, alg *HashAlg, forceUpdate bool, verbo
 	count := 1
 
 	if verbose {
-		hideCursor()
+		HideCursor()
 	}
 	err = filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
@@ -157,7 +112,7 @@ func updateHashRecursively(dirPath string, alg *HashAlg, forceUpdate bool, verbo
 		if verbose {
 			fmt.Printf("\x1b7\x1b[0J%d/%d %s\x1b8", count, totalCount, path)
 		}
-		_, _, updateErr := updateHash(path, alg, forceUpdate)
+		_, _, updateErr := core.UpdateHash(path, alg, forceUpdate)
 		if updateErr != nil {
 			fmt.Fprintf(os.Stderr, "\nFailed to update hash : %s (reason : %s)\n", path, updateErr.Error())
 		}
@@ -167,7 +122,7 @@ func updateHashRecursively(dirPath string, alg *HashAlg, forceUpdate bool, verbo
 	})
 	if verbose {
 		fmt.Printf("\n")
-		showCursor()
+		ShowCursor()
 	}
 
 	return err

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/little-forest/hasher/core"
 	"github.com/spf13/cobra"
 )
 
@@ -54,13 +55,13 @@ func runCompare(cmd *cobra.Command, args []string) (int, error) {
 Return true if given two failes have same hash value.
 */
 func compare(path1 string, path2 string) (bool, error) {
-	hashAlg := NewDefaultHashAlg(Xattr_prefix)
-	_, hash1, err := updateHash(path1, hashAlg, false)
+	hashAlg := core.NewDefaultHashAlg()
+	_, hash1, err := core.UpdateHash(path1, hashAlg, false)
 	if err != nil {
 		return false, err
 	}
 
-	_, hash2, err := updateHash(path2, hashAlg, false)
+	_, hash2, err := core.UpdateHash(path2, hashAlg, false)
 	if err != nil {
 		return false, err
 	}

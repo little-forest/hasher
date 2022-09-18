@@ -21,6 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
+	. "github.com/little-forest/hasher/common"
+	"github.com/little-forest/hasher/core"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -49,7 +51,7 @@ func runFind(cmd *cobra.Command, args []string) (int, error) {
 }
 
 func doFind(rootDir string) error {
-	hashAlg := NewDefaultHashAlg(Xattr_prefix)
+	hashAlg := core.NewDefaultHashAlg()
 	err := filepath.WalkDir(rootDir, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to filepath.Walk")
@@ -67,13 +69,13 @@ func doFind(rootDir string) error {
 	return err
 }
 
-func getHashXattr(path string, hashAlg *HashAlg) (string, error) {
-	f, err := openFile(path)
+func getHashXattr(path string, hashAlg *core.HashAlg) (string, error) {
+	f, err := OpenFile(path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open : %s (%s)", path, err.Error())
 		return "", err
 	}
 
-	hash := getXattr(f, hashAlg.AttrName)
+	hash := core.GetXattr(f, hashAlg.AttrName)
 	return hash, nil
 }

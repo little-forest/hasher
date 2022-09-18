@@ -21,10 +21,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Xattr_prefix = "user.hasher"
-const Xattr_size = Xattr_prefix + ".size"
-const Xattr_modifiedTime = Xattr_prefix + ".mtime"
-
 const Flag_root_Verbose = "verbose"
 const Flag_root_Recursive = "recursive"
 
