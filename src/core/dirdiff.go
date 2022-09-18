@@ -79,6 +79,23 @@ func (d DirDiff) GetSortedChildren() []*FileDiff {
 	return children
 }
 
+// Mark given status to all children
+func (d *DirDiff) MarkAll(status DiffStatus) {
+	for _, f := range d.files {
+		f.Status = status
+	}
+}
+
+// Returns true if all children has SAME status.
+func (d DirDiff) IsAllSame() bool {
+	for _, f := range d.files {
+		if f.Status != SAME {
+			return false
+		}
+	}
+	return true
+}
+
 func (me *DirDiff) Compare(other *DirDiff) {
 	myChildren := me.GetChildren()
 
@@ -182,6 +199,7 @@ func DirDiffRecursively(baseDir string, targetDir string) ([]*DirPair, error) {
 			fmt.Fprintln(os.Stderr, err.Error())
 			continue
 		}
+		dd.MarkAll(ADDED)
 		dirPairs = append(dirPairs, NewBaseOnlyDirPair(dd))
 	}
 
@@ -194,6 +212,7 @@ func DirDiffRecursively(baseDir string, targetDir string) ([]*DirPair, error) {
 			fmt.Fprintln(os.Stderr, err.Error())
 			continue
 		}
+		dd.MarkAll(REMOVED)
 		dirPairs = append(dirPairs, NewTargetOnlyDirPair(dd))
 	}
 

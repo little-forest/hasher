@@ -49,20 +49,33 @@ func dirDiff(basePath string, targetPath string, verbose bool) (int, error) {
 	for _, pair := range dirPairs {
 		if pair.Status == core.BASE_ONLY {
 			fmt.Println(C_cyan.Apply(fmt.Sprintf("[+] %s", pair.Path())))
+			displayDir(pair.Base)
 		} else if pair.Status == core.TARGET_ONLY {
 			fmt.Println(C_pink.Apply(fmt.Sprintf("[-] %s", pair.Path())))
+			displayDir(pair.Target)
 		} else {
-			fmt.Printf("    %s\n", pair.Path())
-		}
-
-		if pair.Status == core.PAIR {
-			for _, f := range pair.Base.GetSortedChildren() {
-				col := getColorByStatus(f.Status)
-				fmt.Println(col.Apply(fmt.Sprintf("      %s %s", f.StatusMark(), f.Basename)))
+			// same
+			if pair.Base.IsAllSame() {
+				fmt.Println(C_gray.Apply(fmt.Sprintf("[=] %s", pair.Path())))
+			} else {
+				fmt.Printf("    %s\n", pair.Path())
 			}
+			displayDir(pair.Base)
 		}
 	}
 	return 0, err
+}
+
+func displayDir(d *core.DirDiff) {
+	for _, f := range d.GetSortedChildren() {
+		col := getColorByStatus(f.Status)
+
+		msg := col.Apply(fmt.Sprintf("      %s %s", f.StatusMark(), f.Basename))
+		if f.Status == core.RENAMED {
+			msg += "  " + C_blue.Apply("<-->") + "  " + col.Apply(f.PairFileName)
+		}
+		fmt.Println(msg)
+	}
 }
 
 func checkDirectory(path string) error {
