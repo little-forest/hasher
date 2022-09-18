@@ -43,7 +43,7 @@ func runDirDiff(cmd *cobra.Command, args []string) (int, error) {
 
 func dirDiff(basePath string, targetPath string, verbose bool) (int, error) {
 	// diff
-	dirPairs, err := core.DirDiffRecursive(basePath, targetPath)
+	dirPairs, err := core.DirDiffRecursively(basePath, targetPath)
 
 	// display
 	for _, pair := range dirPairs {
