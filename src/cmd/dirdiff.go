@@ -11,10 +11,21 @@ import (
 
 // dirdiffCmd represents the dirdiff command
 var dirdiffCmd = &cobra.Command{
-	Use:   "dirdiff",
-	Short: "A brief description of your command",
-	Long:  ``,
-	RunE:  statusWrapper.RunE(runDirDiff),
+	Use:   "dirdiff BASE_DIR TARGET_DIR",
+	Args:  cobra.ExactArgs(2),
+	Short: "Recursively compares two directories and displays the differences.",
+	Long: `Recursively compares two directories and displays the differences.
+Each files are compared using hash values.
+
+  [=] : same file
+  [+] : added file
+  [-] : removed file
+  [>] : different file (base is newer)
+  [<] : different file (target is newer)
+  [~] : different file (modtime is same)
+  [R] : renamed file
+`,
+	RunE: statusWrapper.RunE(runDirDiff),
 }
 
 func init() {
