@@ -66,7 +66,8 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 				continue
 			}
 			// update directory
-			err = updateHashRecursively(p, alg, forceUpdate, verbose)
+			// err = updateHashRecursively(p, alg, forceUpdate, verbose)
+			err = updateHashConcurrently(p, alg, forceUpdate, verbose)
 		} else {
 			// update file
 			changed, hash, err := core.UpdateHash(p, alg, forceUpdate)
@@ -125,5 +126,13 @@ func updateHashRecursively(dirPath string, alg *core.HashAlg, forceUpdate bool, 
 		ShowCursor()
 	}
 
+	return err
+}
+
+func updateHashConcurrently(dirPath string, alg *core.HashAlg, forceUpdate bool, verbose bool) error {
+	fmt.Printf("Concurrent update!\n")
+	paths := make([]string, 1)
+	paths = append(paths, dirPath)
+	err := core.ConcurrentUpdateHash(paths, alg, forceUpdate)
 	return err
 }

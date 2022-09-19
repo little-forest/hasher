@@ -3,7 +3,10 @@ package core
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -113,4 +116,103 @@ func calcHashString(r io.Reader, hashAlg *HashAlg) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+}
+
+type UpdateTask struct {
+	Path string
+}
+
+func NewUpdateTask(path string) UpdateTask {
+	return UpdateTask{
+		Path: path,
+	}
+}
+
+type UpdateResult struct {
+	WorkerId int
+	Task     UpdateTask
+	Hash     string
+	Err      error
+}
+
+func NewUpdateResult(workerId int, task UpdateTask, hash string, err error) UpdateResult {
+	return UpdateResult{
+		WorkerId: workerId,
+		Task:     task,
+		Hash:     hash,
+		Err:      err,
+	}
+}
+
+func ConcurrentUpdateHash(paths []string, alg *HashAlg, forceUpdate bool) error {
+	tasks := make(chan UpdateTask)
+	results := make(chan UpdateResult)
+
+	// run workers
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go updateHashWorker(i, tasks, results, alg, forceUpdate)
+	}
+
+	// collect target files
+	inputDone := make(chan int)
+	go listTargetFiles(paths, tasks, inputDone)
+
+	// wait
+	remains := -1
+	done := 0
+	for {
+		select {
+		case <-results:
+			done++
+			//fmt.Printf("%d : %d : %s %s\n", r.WorkerId, done, r.Hash, r.Task.Path)
+		case taskNum := <-inputDone:
+			remains = taskNum
+		}
+		if remains >= 0 && done >= remains {
+			break
+		}
+	}
+	return nil
+}
+
+func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- int) {
+	var numFiles int
+
+	for _, p := range paths {
+		s, err := os.Stat(p)
+		if err != nil {
+			// TODO error handling
+			continue
+		}
+
+		if !s.IsDir() {
+			// TODO skip symlink
+			tasks <- NewUpdateTask(p)
+			numFiles++
+			continue
+		}
+
+		// walk directory
+		// TODO error check
+		// nolint:staticcheck
+		err = filepath.WalkDir(p, func(path string, info fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				tasks <- NewUpdateTask(path)
+				numFiles++
+			}
+			return nil
+		})
+	}
+
+	inputDone <- numFiles
+}
+
+func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResult, alg *HashAlg, forceUpdate bool) {
+	for t := range tasks {
+		_, hash, err := UpdateHash(t.Path, alg, forceUpdate)
+		results <- NewUpdateResult(id, t, hash, err)
+	}
 }
