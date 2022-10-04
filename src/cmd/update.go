@@ -130,9 +130,12 @@ func updateHashRecursively(dirPath string, alg *core.HashAlg, forceUpdate bool, 
 }
 
 func updateHashConcurrently(dirPath string, alg *core.HashAlg, forceUpdate bool, verbose bool) error {
+	numOfWorkers := 2
+	viewer := NewHasherProgressViewer(numOfWorkers, verbose)
+
 	fmt.Printf("Concurrent update!\n")
 	paths := make([]string, 1)
 	paths = append(paths, dirPath)
-	err := core.ConcurrentUpdateHash(paths, alg, forceUpdate)
+	err := core.ConcurrentUpdateHash(paths, alg, numOfWorkers, forceUpdate, viewer)
 	return err
 }

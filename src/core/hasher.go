@@ -144,14 +144,18 @@ func NewUpdateResult(workerId int, task UpdateTask, hash string, err error) Upda
 	}
 }
 
-func ConcurrentUpdateHash(paths []string, alg *HashAlg, forceUpdate bool) error {
-	tasks := make(chan UpdateTask)
+func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceUpdate bool, watcher ProgressWatcher) error {
+	numOfWorkers = adjustNumOfWorkers(numOfWorkers, runtime.NumCPU())
+
+	tasks := make(chan UpdateTask, numOfWorkers*3)
 	results := make(chan UpdateResult)
 
 	// run workers
-	for i := 0; i < runtime.NumCPU(); i++ {
+	for i := 0; i < numOfWorkers; i++ {
 		go updateHashWorker(i, tasks, results, alg, forceUpdate)
 	}
+
+	watcher.Setup()
 
 	// collect target files
 	inputDone := make(chan int)
@@ -162,9 +166,9 @@ func ConcurrentUpdateHash(paths []string, alg *HashAlg, forceUpdate bool) error 
 	done := 0
 	for {
 		select {
-		case <-results:
+		case r := <-results:
 			done++
-			//fmt.Printf("%d : %d : %s %s\n", r.WorkerId, done, r.Hash, r.Task.Path)
+			watcher.Progress(r.WorkerId, done, remains, r.Task.Path)
 		case taskNum := <-inputDone:
 			remains = taskNum
 		}
@@ -172,6 +176,9 @@ func ConcurrentUpdateHash(paths []string, alg *HashAlg, forceUpdate bool) error 
 			break
 		}
 	}
+
+	watcher.TearDown()
+
 	return nil
 }
 
@@ -215,4 +222,17 @@ func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResu
 		_, hash, err := UpdateHash(t.Path, alg, forceUpdate)
 		results <- NewUpdateResult(id, t, hash, err)
 	}
+}
+
+func adjustNumOfWorkers(numOfWorkers int, numOfCPU int) int {
+	if numOfWorkers < 1 {
+		numOfWorkers = 1
+	}
+	if numOfCPU <= 2 {
+		return 1
+	}
+	if numOfWorkers > numOfCPU-1 {
+		return numOfCPU - 1
+	}
+	return numOfWorkers
 }
