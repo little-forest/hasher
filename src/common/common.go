@@ -87,6 +87,18 @@ func CleanPath(path string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
+func CountAllFiles(paths []string, verbose bool) (int, error) {
+	total := 0
+	for _, p := range paths {
+		files, err := CountFiles(p, verbose)
+		total += files
+		if err != nil {
+			return total, err
+		}
+	}
+	return total, nil
+}
+
 func CountFiles(path string, verbose bool) (int, error) {
 	threshold := 1000
 

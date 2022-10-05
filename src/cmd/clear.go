@@ -73,6 +73,7 @@ func runClear(cmd *cobra.Command, args []string) (int, error) {
 }
 
 func clear(path string) error {
+	// TODO: deal symbolic link
 	file, err := OpenFile(path)
 	if err != nil {
 		return err
@@ -86,11 +87,11 @@ func clearRecursively(dirPath string, verbose bool) error {
 		return err
 	}
 
+	var v core.ProgressWatcher = NewHasherProgressViewer(1, verbose)
+	v.Setup()
+
 	count := 1
 
-	if verbose {
-		HideCursor()
-	}
 	err = filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to filepath.Walk")
@@ -100,20 +101,16 @@ func clearRecursively(dirPath string, verbose bool) error {
 			return nil
 		}
 
-		if verbose {
-			fmt.Printf("\x1b7\x1b[0J%d/%d %s\x1b8", count, totalCount, path)
-		}
+		v.Progress(0, count, totalCount, path)
 		clearErr := clear(path)
 		if clearErr != nil {
-			fmt.Fprintf(os.Stderr, "\nFailed to clear hash : %s (reason : %s)\n", path, clearErr.Error())
+			msg := fmt.Sprintf("Failed to clear hash : %s", clearErr.Error())
+			v.ShowError(msg)
 		}
 		count++
 
 		return nil
 	})
-	if verbose {
-		fmt.Printf("\n")
-		ShowCursor()
-	}
+	v.TearDown()
 	return err
 }
