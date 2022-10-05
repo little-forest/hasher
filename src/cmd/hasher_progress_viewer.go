@@ -15,6 +15,7 @@ import (
 type HasherProgressViewer struct {
 	NumOfWorkers int
 	Verbose      bool
+	total        int
 }
 
 func NewHasherProgressViewer(numOfWorkers int, verbose bool) *HasherProgressViewer {
@@ -24,7 +25,20 @@ func NewHasherProgressViewer(numOfWorkers int, verbose bool) *HasherProgressView
 	}
 }
 
+func (p *HasherProgressViewer) SetTotal(total int) {
+	if total >= 0 {
+		p.total = total
+	}
+}
+
+func (p HasherProgressViewer) IsVerbose() bool {
+	return p.Verbose
+}
+
 func (p HasherProgressViewer) Setup() {
+	if !p.Verbose {
+		return
+	}
 	row := p.NumOfWorkers
 	fmt.Print(strings.Repeat("\n", row))
 	fmt.Print(aec.Hide)
@@ -32,6 +46,14 @@ func (p HasherProgressViewer) Setup() {
 }
 
 func (p HasherProgressViewer) Progress(workerId int, done int, total int, path string) {
+	if !p.Verbose {
+		return
+	}
+
+	if total < 0 && p.total >= 0 {
+		total = p.total
+	}
+
 	path = chopPath(path)
 
 	fmt.Print(aec.Down(uint(workerId)))
@@ -43,17 +65,22 @@ func (p HasherProgressViewer) Progress(workerId int, done int, total int, path s
 }
 
 func (p HasherProgressViewer) ShowError(msg string) {
-	// Insert one line to bottom
-	fmt.Print(aec.NextLine(uint(p.NumOfWorkers)))
-	fmt.Printf("\n")
-	fmt.Print(aec.PreviousLine(uint(p.NumOfWorkers + 1)))
+	if p.Verbose {
+		// Insert one line to bottom
+		fmt.Print(aec.NextLine(uint(p.NumOfWorkers)))
+		fmt.Printf("\n")
+		fmt.Print(aec.PreviousLine(uint(p.NumOfWorkers + 1)))
 
-	fmt.Print("\x1b[1L") // insert one line
-	// TODO when stderr is redirected to file, display is broken
+		fmt.Print("\x1b[1L") // insert one line
+	}
+	// TODO: when stderr is redirected to file, display is broken
 	fmt.Fprintln(os.Stderr, C_lred.Apply(msg))
 }
 
 func (p HasherProgressViewer) TearDown() {
+	if !p.Verbose {
+		return
+	}
 	row := p.NumOfWorkers + 1
 	fmt.Print(aec.Down(uint(row)))
 	fmt.Print(aec.Show)

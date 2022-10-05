@@ -159,7 +159,7 @@ func NewDirDiff(dirPath string, alg *HashAlg) (*DirDiff, error) {
 
 	for _, fileInfo := range fileInfos {
 		if !fileInfo.IsDir() {
-			// TODO symbolic link check
+			// TODO: symbolic link check
 			filePath := filepath.Join(dirPath, fileInfo.Name())
 			f, err := NewFileDiff(filePath, alg)
 			if err != nil {
@@ -195,7 +195,7 @@ func DirDiffRecursively(baseDir string, targetDir string) ([]*DirPair, error) {
 	for p := range baseonly.Iterator().C {
 		dd, err := NewDirDiff(filepath.Join(baseDir, p), alg)
 		if err != nil {
-			// TODO
+			// TODO:
 			fmt.Fprintln(os.Stderr, err.Error())
 			continue
 		}
@@ -208,7 +208,7 @@ func DirDiffRecursively(baseDir string, targetDir string) ([]*DirPair, error) {
 	for p := range removedDirList.Iterator().C {
 		dd, err := NewDirDiff(filepath.Join(targetDir, p), alg)
 		if err != nil {
-			// TODO
+			// TODO:
 			fmt.Fprintln(os.Stderr, err.Error())
 			continue
 		}

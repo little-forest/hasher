@@ -73,7 +73,7 @@ func runClear(cmd *cobra.Command, args []string) (int, error) {
 }
 
 func clear(path string) error {
-	// TODO deal symbolic link
+	// TODO: deal symbolic link
 	file, err := OpenFile(path)
 	if err != nil {
 		return err

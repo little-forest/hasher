@@ -145,6 +145,12 @@ func NewUpdateResult(workerId int, task UpdateTask, hash string, err error) Upda
 }
 
 func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceUpdate bool, watcher ProgressWatcher) error {
+	total, err := CountAllFiles(paths, watcher.IsVerbose())
+	if err != nil {
+		return err
+	}
+	watcher.SetTotal(total)
+
 	numOfWorkers = adjustNumOfWorkers(numOfWorkers, runtime.NumCPU())
 
 	tasks := make(chan UpdateTask, numOfWorkers*3)
@@ -188,19 +194,19 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 	for _, p := range paths {
 		s, err := os.Stat(p)
 		if err != nil {
-			// TODO error handling
+			// TODO: error handling
 			continue
 		}
 
 		if !s.IsDir() {
-			// TODO skip symlink
+			// TODO: skip symlink
 			tasks <- NewUpdateTask(p)
 			numFiles++
 			continue
 		}
 
 		// walk directory
-		// TODO error check
+		// TODO: error check
 		// nolint:staticcheck
 		err = filepath.WalkDir(p, func(path string, info fs.DirEntry, err error) error {
 			if err != nil {

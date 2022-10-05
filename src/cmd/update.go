@@ -17,13 +17,10 @@ package cmd
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
-	"path/filepath"
 
 	. "github.com/little-forest/hasher/common"
 	"github.com/little-forest/hasher/core"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -52,90 +49,111 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 
 	status := 0
 	var errorStatus error
-	for _, p := range args {
-		isDir, err := IsDirectory(p)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-			continue
-		}
 
-		if isDir {
-			if !recuesive {
+	if !recuesive {
+		// normal update, file only
+		for _, p := range args {
+			isDir, err := IsDirectory(p)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+				continue
+			}
+
+			if isDir {
 				// skip dir
 				fmt.Fprintf(os.Stderr, "Skip directory : %s\n", p)
 				continue
-			}
-			// update directory
-			// err = updateHashRecursively(p, alg, forceUpdate, verbose)
-			err = updateHashConcurrently(p, alg, forceUpdate, verbose)
-		} else {
-			// update file
-			changed, hash, err := core.UpdateHash(p, alg, forceUpdate)
-			if err == nil && verbose {
-				mark := ""
-				if changed {
-					mark = "*"
+			} else {
+				// update file
+				changed, hash, err := core.UpdateHash(p, alg, forceUpdate)
+				if err == nil && verbose {
+					mark := ""
+					if changed {
+						mark = "*"
+					}
+					fmt.Fprintf(os.Stdout, "%s  %s %s\n", p, hash, mark)
 				}
-				fmt.Fprintf(os.Stdout, "%s  %s %s\n", p, hash, mark)
+			}
+
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+				errorStatus = err
+				status = 1
+				continue
 			}
 		}
-
+	} else {
+		// recursive update, directory only
+		err := updateHashConcurrently(args, alg, forceUpdate, verbose)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			errorStatus = err
 			status = 1
-			continue
 		}
 	}
 	return status, errorStatus
 }
 
-func updateHashRecursively(dirPath string, alg *core.HashAlg, forceUpdate bool, verbose bool) error {
-	totalCount, err := CountFiles(dirPath, verbose)
-	if err != nil {
-		return err
-	}
+// func updateHashRecursively(dirPath string, alg *core.HashAlg, forceUpdate bool, verbose bool) error {
+// 	// TODO: delete
+// 	totalCount, err := CountFiles(dirPath, verbose)
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	count := 1
+//
+// 	if verbose {
+// 		HideCursor()
+// 	}
+// 	err = filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, err error) error {
+// 		if err != nil {
+// 			return errors.Wrap(err, "failed to filepath.Walk")
+// 		}
+//
+// 		if info.IsDir() {
+// 			return nil
+// 		}
+//
+// 		if verbose {
+// 			fmt.Printf("\x1b7\x1b[0J%d/%d %s\x1b8", count, totalCount, path)
+// 		}
+// 		_, _, updateErr := core.UpdateHash(path, alg, forceUpdate)
+// 		if updateErr != nil {
+// 			fmt.Fprintf(os.Stderr, "\nFailed to update hash : %s (reason : %s)\n", path, updateErr.Error())
+// 		}
+// 		count++
+//
+// 		return nil
+// 	})
+// 	if verbose {
+// 		fmt.Printf("\n")
+// 		ShowCursor()
+// 	}
+//
+// 	return err
+// }
 
-	count := 1
-
-	if verbose {
-		HideCursor()
-	}
-	err = filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, err error) error {
-		if err != nil {
-			return errors.Wrap(err, "failed to filepath.Walk")
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		if verbose {
-			fmt.Printf("\x1b7\x1b[0J%d/%d %s\x1b8", count, totalCount, path)
-		}
-		_, _, updateErr := core.UpdateHash(path, alg, forceUpdate)
-		if updateErr != nil {
-			fmt.Fprintf(os.Stderr, "\nFailed to update hash : %s (reason : %s)\n", path, updateErr.Error())
-		}
-		count++
-
-		return nil
-	})
-	if verbose {
-		fmt.Printf("\n")
-		ShowCursor()
-	}
-
-	return err
-}
-
-func updateHashConcurrently(dirPath string, alg *core.HashAlg, forceUpdate bool, verbose bool) error {
-	numOfWorkers := 2
+func updateHashConcurrently(dirPaths []string, alg *core.HashAlg, forceUpdate bool, verbose bool) error {
+	numOfWorkers := 1
 	viewer := NewHasherProgressViewer(numOfWorkers, verbose)
 
-	fmt.Printf("Concurrent update!\n")
-	paths := make([]string, 1)
-	paths = append(paths, dirPath)
-	err := core.ConcurrentUpdateHash(paths, alg, numOfWorkers, forceUpdate, viewer)
-	return err
+	paths := make([]string, 0)
+	for _, p := range dirPaths {
+		if isDir, err := IsDirectory(p); isDir && err == nil {
+			paths = append(paths, p)
+		} else {
+			if err == nil {
+				fmt.Fprintf(os.Stderr, "Not a directory, skip. : %s\n", p)
+			} else {
+				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			}
+		}
+	}
+
+	if len(paths) > 0 {
+		err := core.ConcurrentUpdateHash(paths, alg, numOfWorkers, forceUpdate, viewer)
+		return err
+	} else {
+		return nil
+	}
 }

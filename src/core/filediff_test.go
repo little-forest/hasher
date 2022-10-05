@@ -30,5 +30,5 @@ func TestNewFileDiff(t *testing.T) {
 }
 
 func TestFileDiffCompare(t *testing.T) {
-	// TODO
+	// TODO:
 }
