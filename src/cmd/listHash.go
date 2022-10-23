@@ -17,12 +17,14 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 
 	"path/filepath"
 
 	. "github.com/little-forest/hasher/common"
 	"github.com/little-forest/hasher/core"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -39,8 +41,7 @@ func init() {
 }
 
 func runListHash(cmd *cobra.Command, args []string) (int, error) {
-	// TODO: deal verbose
-	// verbose, _ := cmd.Flags().GetBool(Flag_root_Verbose)
+	verbose, _ := cmd.Flags().GetBool(Flag_root_Verbose)
 	recuesive, _ := cmd.Flags().GetBool(Flag_root_Recursive)
 
 	alg := core.NewDefaultHashAlg()
@@ -65,9 +66,8 @@ func runListHash(cmd *cobra.Command, args []string) (int, error) {
 				// list hash
 				absPath, _ := filepath.Abs(p)
 				_, hash, err := core.UpdateHash2(absPath, alg, false)
-				// TODO: hash 出力
 				if err == nil {
-					printHashAsJson(hash)
+					printHashAsDollyFormat(hash)
 				}
 			}
 
@@ -79,18 +79,60 @@ func runListHash(cmd *cobra.Command, args []string) (int, error) {
 			}
 		}
 	} else {
-		panic("not implemented")
-		// recursive update, directory only
-		// TODO: implement
-		// err := updateHashConcurrently(args, alg, forceUpdate, verbose)
-		// if err != nil {
-		// 	errorStatus = err
-		// 	status = 1
-		// }
+		// recursive list, directory only
+		for _, p := range args {
+			isDir, err := IsDirectory(p)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+				continue
+			}
+
+			if isDir {
+				err = listHashRecursively(p, alg, verbose)
+			} else {
+				// skip not directory
+				fmt.Fprintf(os.Stderr, "Skip non directory : %s\n", p)
+				continue
+			}
+
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+				errorStatus = err
+				status = 1
+				continue
+			}
+		}
 	}
 	return status, errorStatus
 }
 
-func printHashAsJson(hash *core.Hash) {
+func printHashAsDollyFormat(hash *core.Hash) {
 	fmt.Printf("%s\n", hash.DollyTsv())
+}
+
+func listHashRecursively(dirPath string, alg *core.HashAlg, verbose bool) error {
+	err := filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, e error) error {
+		if e != nil {
+			return errors.Wrap(e, "failed to filepath.Walk")
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		if verbose {
+			// TODO: verbose
+			// fmt.Printf("\x1b7\x1b[0J%d/%d %s\x1b8", count, totalCount, path)
+			fmt.Printf("verbose\n")
+		}
+		absPath, _ := filepath.Abs(path)
+		_, hash, e := core.UpdateHash2(absPath, alg, false)
+		if e != nil {
+			fmt.Fprintf(os.Stderr, "\nFailed to update hash : %s (reason : %s)\n", absPath, e.Error())
+		} else {
+			printHashAsDollyFormat(hash)
+		}
+		return nil
+	})
+	return err
 }
