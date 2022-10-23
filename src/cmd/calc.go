@@ -44,7 +44,7 @@ func init() {
 
 func runCalcHash(cmd *cobra.Command, args []string) (int, error) {
 	for _, v := range args {
-		hash, err := core.CalcFileHash(v, core.NewDefaultHashAlg())
+		hash, err := core.CalcHash(v, core.NewDefaultHashAlg())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			continue
