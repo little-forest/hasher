@@ -1,7 +1,6 @@
 package core
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -25,34 +24,20 @@ func TestUpdateHash(t *testing.T) {
 	// assert.Equal(t, expectedHashValue, attrHash)
 }
 
-func TestCalcFileHash(t *testing.T) {
+func TestCalcHash(t *testing.T) {
 	alg := NewDefaultHashAlg()
 	path, expectedHashValue := makeSingleDummyFile(t, &alg.Alg)
 
-	hash, err := CalcFileHash(path, alg)
+	hash, err := CalcHash(path, alg)
 	assert.NoError(t, err)
-	assert.Equal(t, expectedHashValue, hash)
+	assert.Equal(t, expectedHashValue, hash.String())
 }
 
-func TestCalcFileHash_failed(t *testing.T) {
+func TestCalcHash_failed(t *testing.T) {
 	alg := NewDefaultHashAlg()
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "dummy.txt")
 
-	_, err := CalcFileHash(path, alg)
+	_, err := CalcHash(path, alg)
 	assert.Error(t, err)
-}
-
-func TestCalcHashString(t *testing.T) {
-	alg := NewDefaultHashAlg()
-	path, expectedHashValue := makeSingleDummyFile(t, &alg.Alg)
-
-	f, err := os.Open(path)
-	assert.NoError(t, err)
-	//nolint:errcheck
-	defer f.Close()
-
-	hash, err := calcHashString(f, alg)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedHashValue, hash)
 }

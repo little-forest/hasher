@@ -32,16 +32,26 @@ const Xattr_hashCheckedTime = Xattr_prefix + ".htime"
 //	hash value : string
 //	error : error
 func UpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, error) {
+	changed, hash, err := UpdateHash2(path, alg, forceUpdate)
+	return changed, hash.String(), err
+}
+
+// Update specified file's hash value
+//
+//	changed : bool
+//	hash value : *Hash
+//	error : error
+func UpdateHash2(path string, alg *HashAlg, forceUpdate bool) (bool, *Hash, error) {
 	file, err := OpenFile(path)
 	if err != nil {
-		return false, "", err
+		return false, nil, err
 	}
 	// nolint:errcheck
 	defer file.Close()
 
 	info, err := file.Stat()
 	if err != nil {
-		return false, "", err
+		return false, nil, err
 	}
 	size := fmt.Sprint(info.Size())
 	modTime := strconv.FormatInt(info.ModTime().UnixNano(), 10)
@@ -59,18 +69,19 @@ func UpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, erro
 		if !forceUpdate && !changed {
 			// update only checked time
 			err := updateHashCheckedTime(file)
-			return false, curHash, err
+			hash, _ := NewHashFromString(path, alg, curHash, info.ModTime().Unix())
+			return false, hash, err
 		}
 	}
 
 	// do calculate hash value
-	hash, err := calcHashString(file, alg)
+	hash, err := CalcHash(path, alg)
 	if err != nil {
-		return false, "", err
+		return false, nil, err
 	}
 
 	// update attributes
-	if err := SetXattr(file, alg.AttrName, hash); err != nil {
+	if err := SetXattr(file, alg.AttrName, hash.String()); err != nil {
 		return true, hash, err
 	}
 	if err := updateHashCheckedTime(file); err != nil {
@@ -94,29 +105,46 @@ func updateHashCheckedTime(f *os.File) error {
 	return nil
 }
 
-func CalcFileHash(path string, alg *HashAlg) (string, error) {
-	r, err := OpenFile(path)
-	// nolint:staticcheck,errcheck
-	defer r.Close()
-	if err != nil {
-		return "", err
+// func CalcFileHash(path string, alg *HashAlg) (string, error) {
+// 	r, err := OpenFile(path)
+// 	// nolint:staticcheck,errcheck
+// 	defer r.Close()
+// 	if err != nil {
+// 		return "", err
+// 	}
+//
+// 	hash, err := calcHashString(r, alg)
+//
+// 	return hash, err
+// }
+
+func CalcHash(path string, hashAlg *HashAlg) (*Hash, error) {
+	if !hashAlg.Alg.Available() {
+		return nil, fmt.Errorf("no implementation")
 	}
 
-	hash, err := calcHashString(r, alg)
-	return hash, err
-}
-
-func calcHashString(r io.Reader, hashAlg *HashAlg) (string, error) {
-	if !hashAlg.Alg.Available() {
-		return "", fmt.Errorf("no implementation")
+	r, err := OpenFile(path)
+	if err != nil {
+		return nil, err
 	}
 
 	hash := hashAlg.Alg.New()
 	if _, err := io.CopyBuffer(hash, r, make([]byte, hashBufSize)); err != nil {
-		return "", err
+		return nil, err
 	}
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+
+	info, _ := os.Stat(path)
+
+	return NewHash(path, hashAlg, hash.Sum(nil), info.ModTime().Unix()), nil
 }
+
+// func calcHashString(r io.Reader, hashAlg *HashAlg) (string, error) {
+// 	hash, err := calcHash(r, hashAlg)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return hash.String(), nil
+// }
 
 type UpdateTask struct {
 	Path string
