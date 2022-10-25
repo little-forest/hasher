@@ -22,49 +22,53 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const Flag_Compare_Source = "source"
+const Flag_Compare_Target = "target"
+
 // compareCmd represents the compare command
 var compareCmd = &cobra.Command{
 	Use:   "compare",
-	Short: "Compare if two files are identical",
+	Short: "",
 	Long:  ``,
 	RunE:  statusWrapper.RunE(runCompare),
 }
 
 func init() {
 	rootCmd.AddCommand(compareCmd)
+
+	compareCmd.Flags().StringP(Flag_Compare_Source, "s", "", "source hash file")
+	compareCmd.Flags().StringP(Flag_Compare_Target, "t", "", "target hash file")
 }
 
 func runCompare(cmd *cobra.Command, args []string) (int, error) {
-	if len(args) < 2 {
-		return -1, fmt.Errorf("too few arguments")
-	}
+	sourceFile, _ := cmd.Flags().GetString(Flag_Compare_Source)
+	targetFile, _ := cmd.Flags().GetString(Flag_Compare_Target)
 
-	result, err := compare(args[0], args[1])
+	srcHashData, err := core.LoadHashData(sourceFile)
 	if err != nil {
-		return 1, nil
+		return 1, err
 	}
 
-	if result {
-		return 0, nil
-	} else {
-		return 1, nil
+	targetHashData, err := core.LoadHashData(targetFile)
+	if err != nil {
+		return 1, err
 	}
+
+	result, err := doCompare(srcHashData, targetHashData)
+	return result, err
 }
 
-/*
-Return true if given two failes have same hash value.
-*/
-func compare(path1 string, path2 string) (bool, error) {
-	hashAlg := core.NewDefaultHashAlg()
-	_, hash1, err := core.UpdateHash(path1, hashAlg, false)
-	if err != nil {
-		return false, err
-	}
+func doCompare(src *core.HashStore, target *core.HashStore) (int, error) {
+	for _, hash := range src.Values() {
+		sames := target.Get(hash.String())
 
-	_, hash2, err := core.UpdateHash(path2, hashAlg, false)
-	if err != nil {
-		return false, err
+		fmt.Printf("%s\t%d", hash.Path, len(sames))
+		if len(sames) > 0 {
+			for _, s := range sames {
+				fmt.Printf("\t%s", s.Path)
+			}
+		}
+		fmt.Printf("\n")
 	}
-
-	return (hash1 == hash2), nil
+	return 0, nil
 }

@@ -40,3 +40,15 @@ func NewHashAlg(alg crypto.Hash) *HashAlg {
 	}
 	return hashAlg
 }
+
+func NewHashAlgFromString(algName string) *HashAlg {
+	switch algName {
+	case "sha1":
+		return NewHashAlg(crypto.SHA1)
+	case "sha256":
+		return NewHashAlg(crypto.SHA256)
+	case "sha512":
+		return NewHashAlg(crypto.SHA512)
+	}
+	return nil
+}
