@@ -1,14 +1,9 @@
 package core
 
 import (
-	"encoding/csv"
 	"encoding/hex"
 	"fmt"
-	"io"
-	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 )
 
 // ------------------------------------------------------------------------------
@@ -61,61 +56,4 @@ func (h Hash) Json() string {
 func (h Hash) DollyTsv() string {
 	basename := filepath.Base(h.Path)
 	return fmt.Sprintf("%s\t%s\t%d\t%s:%s", h.Path, basename, h.ModTime, h.Alg.AlgName, h.String())
-}
-
-func LoadHashData(path string) (*HashStore, error) {
-	store := NewHashStore()
-
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	// nolint:errcheck
-	defer f.Close()
-
-	r := csv.NewReader(f)
-	r.Comma = '\t'
-	r.Comment = '#'
-
-	for {
-		line, err := r.Read()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to parse TSV : %s\n", err.Error())
-			continue
-		}
-
-		hash, err := parseHashLine(line)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-		}
-
-		store.Put(hash)
-	}
-
-	return store, nil
-}
-
-func parseHashLine(line []string) (*Hash, error) {
-	if len(line) < 4 {
-		return nil, fmt.Errorf("Invalid format : %v", line)
-	}
-	modTime, err := strconv.Atoi(line[2])
-	if err != nil {
-		return nil, fmt.Errorf("Failed to parse modTime : %v", line)
-	}
-
-	pos := strings.Index(line[3], ":")
-	if pos == -1 {
-		return nil, fmt.Errorf("Invalid hash value format : %v", line)
-	}
-	alg := NewHashAlgFromString(line[3][0:pos])
-	hashValue := line[3][pos+1:]
-
-	hash, err := NewHashFromString(line[0], alg, hashValue, int64(modTime))
-	if err != nil {
-		return nil, fmt.Errorf("Failed to patse tsv : %v", line)
-	}
-	return hash, nil
 }
