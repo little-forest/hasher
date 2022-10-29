@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 
+	. "github.com/little-forest/hasher/common"
 	"github.com/little-forest/hasher/core"
 	"github.com/spf13/cobra"
 )
@@ -35,7 +36,7 @@ const SHOW_MISSING_ONLY = 2
 
 // compareCmd represents the compare command
 var compareCmd = &cobra.Command{
-	Use:   "compare",
+	Use:   "compare -s (HASH_LIST_TSV|SOURCE_DIR) -t TARGET_DIR",
 	Short: "Compare hashes",
 	Long:  ``,
 	RunE:  statusWrapper.RunE(runCompare),
@@ -53,8 +54,8 @@ func init() {
 }
 
 func runCompare(cmd *cobra.Command, args []string) (int, error) {
-	sourceFile, _ := cmd.Flags().GetString(Flag_Compare_Source)
-	targetFile, _ := cmd.Flags().GetString(Flag_Compare_Target)
+	source, _ := cmd.Flags().GetString(Flag_Compare_Source)
+	target, _ := cmd.Flags().GetString(Flag_Compare_Target)
 
 	printSourcePathOnly, _ := cmd.Flags().GetBool(Flag_Compare_PrintSourcePathOnly)
 	printZero, _ := cmd.Flags().GetBool(Flag_Compare_PrintZero)
@@ -78,12 +79,27 @@ func runCompare(cmd *cobra.Command, args []string) (int, error) {
 		ShowMode:            showMode,
 	}
 
-	srcHashData, err := core.LoadHashData(sourceFile)
+	// make source hash store
+	var srcHashData *core.HashStore
+	alg := core.NewDefaultHashAlg()
+	isDir, err := IsDirectory(source)
 	if err != nil {
 		return 1, err
 	}
+	if isDir {
+		srcHashData, err = core.MakeHashDataFromDirectory(source, alg, false)
+		if err != nil {
+			return 1, err
+		}
+	} else {
+		srcHashData, err = core.LoadHashData(source)
+		if err != nil {
+			return 1, err
+		}
+	}
 
-	targetHashData, err := core.LoadHashData(targetFile)
+	// make target hash store
+	targetHashData, err := core.LoadHashData(target)
 	if err != nil {
 		return 1, err
 	}

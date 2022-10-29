@@ -4,10 +4,14 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type HashStore struct {
@@ -123,4 +127,33 @@ func parseHashLine(line []string) (*Hash, error) {
 		return nil, fmt.Errorf("Failed to patse tsv : %v", line)
 	}
 	return hash, nil
+}
+
+func MakeHashDataFromDirectory(dirPath string, alg *HashAlg, verbose bool) (*HashStore, error) {
+	store := NewHashStore()
+
+	err := filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, e error) error {
+		if e != nil {
+			return errors.Wrap(e, "failed to filepath.Walk")
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		if verbose {
+			// TODO: verbose
+			// fmt.Printf("\x1b7\x1b[0J%d/%d %s\x1b8", count, totalCount, path)
+			fmt.Printf("verbose\n")
+		}
+		absPath, _ := filepath.Abs(path)
+		_, hash, e := UpdateHash2(absPath, alg, false)
+		if e != nil {
+			fmt.Fprintf(os.Stderr, "\nFailed to update hash : %s (reason : %s)\n", absPath, e.Error())
+		} else {
+			store.Put(hash)
+		}
+		return nil
+	})
+	return store, err
 }
