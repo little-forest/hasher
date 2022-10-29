@@ -24,8 +24,10 @@ import (
 
 const Flag_Compare_Source = "source"
 const Flag_Compare_Target = "target"
-const Flag_Compare_ShowExistsOnly = "show-exists-only"
-const Flag_Compare_ShowMissingOnly = "show-missing-only"
+const Flag_Compare_ShowExistsOnly = "exists-only"
+const Flag_Compare_ShowMissingOnly = "missing-only"
+const Flag_Compare_PrintSourcePathOnly = "print-source-path-only"
+const Flag_Compare_PrintZero = "print0"
 
 const SHOW_ALWAYS = 0
 const SHOW_EXISTS_ONLY = 1
@@ -46,11 +48,17 @@ func init() {
 	compareCmd.Flags().StringP(Flag_Compare_Target, "t", "", "target hash file")
 	compareCmd.Flags().BoolP(Flag_Compare_ShowExistsOnly, "e", false, "show exist files only")
 	compareCmd.Flags().BoolP(Flag_Compare_ShowMissingOnly, "m", false, "show missing files only")
+	compareCmd.Flags().BoolP(Flag_Compare_PrintSourcePathOnly, "f", false, "print only source file path")
+	compareCmd.Flags().BoolP(Flag_Compare_PrintZero, "0", false, "separate by null character")
 }
 
 func runCompare(cmd *cobra.Command, args []string) (int, error) {
 	sourceFile, _ := cmd.Flags().GetString(Flag_Compare_Source)
 	targetFile, _ := cmd.Flags().GetString(Flag_Compare_Target)
+
+	printSourcePathOnly, _ := cmd.Flags().GetBool(Flag_Compare_PrintSourcePathOnly)
+	printZero, _ := cmd.Flags().GetBool(Flag_Compare_PrintZero)
+
 	showExistsOnly, _ := cmd.Flags().GetBool(Flag_Compare_ShowExistsOnly)
 	showMissingOnly, _ := cmd.Flags().GetBool(Flag_Compare_ShowMissingOnly)
 
@@ -75,27 +83,38 @@ func runCompare(cmd *cobra.Command, args []string) (int, error) {
 		return 1, err
 	}
 
-	result, err := doCompare(srcHashData, targetHashData, showMode)
+	result, err := doCompare(srcHashData, targetHashData, printSourcePathOnly, printZero, showMode)
 	return result, err
 }
 
-func doCompare(src *core.HashStore, target *core.HashStore, showMode int) (int, error) {
+func doCompare(src *core.HashStore, target *core.HashStore, printSourcePathOnly bool, printZero bool, showMode int) (int, error) {
+	sep := "\n"
+	if printZero {
+		sep = "\x00"
+	}
+
 	for _, hash := range src.Values() {
 		sames := target.Get(hash.String())
 
 		if len(sames) > 0 && showMode != SHOW_MISSING_ONLY {
-			fmt.Println(makeResult(hash, sames))
+			fmt.Print(makeResult(hash, sames, printSourcePathOnly))
+			fmt.Print(sep)
 		} else if len(sames) == 0 && showMode != SHOW_EXISTS_ONLY {
-			fmt.Println(makeResult(hash, sames))
+			fmt.Print(makeResult(hash, sames, printSourcePathOnly))
+			fmt.Print(sep)
 		}
 	}
 	return 0, nil
 }
 
-func makeResult(hash *core.Hash, sames []*core.Hash) string {
-	result := fmt.Sprintf("%s\t%d", hash.Path, len(sames))
-	for _, s := range sames {
-		result += "\t" + s.Path
+func makeResult(hash *core.Hash, sames []*core.Hash, printSourcePathOnly bool) string {
+	if printSourcePathOnly {
+		return hash.Path
+	} else {
+		result := fmt.Sprintf("%s\t%d", hash.Path, len(sames))
+		for _, s := range sames {
+			result += "\t" + s.Path
+		}
+		return result
 	}
-	return result
 }
