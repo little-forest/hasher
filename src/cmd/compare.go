@@ -72,6 +72,11 @@ func runCompare(cmd *cobra.Command, args []string) (int, error) {
 	} else if showMissingOnly {
 		showMode = SHOW_MISSING_ONLY
 	}
+	opt := CompareOption{
+		PrintSourcePathOnly: printSourcePathOnly,
+		PrintZero:           printZero,
+		ShowMode:            showMode,
+	}
 
 	srcHashData, err := core.LoadHashData(sourceFile)
 	if err != nil {
@@ -83,24 +88,30 @@ func runCompare(cmd *cobra.Command, args []string) (int, error) {
 		return 1, err
 	}
 
-	result, err := doCompare(srcHashData, targetHashData, printSourcePathOnly, printZero, showMode)
+	result, err := doCompare(srcHashData, targetHashData, opt)
 	return result, err
 }
 
-func doCompare(src *core.HashStore, target *core.HashStore, printSourcePathOnly bool, printZero bool, showMode int) (int, error) {
+type CompareOption struct {
+	PrintSourcePathOnly bool
+	PrintZero           bool
+	ShowMode            int
+}
+
+func doCompare(src *core.HashStore, target *core.HashStore, opt CompareOption) (int, error) {
 	sep := "\n"
-	if printZero {
+	if opt.PrintZero {
 		sep = "\x00"
 	}
 
 	for _, hash := range src.Values() {
 		sames := target.Get(hash.String())
 
-		if len(sames) > 0 && showMode != SHOW_MISSING_ONLY {
-			fmt.Print(makeResult(hash, sames, printSourcePathOnly))
+		if len(sames) > 0 && opt.ShowMode != SHOW_MISSING_ONLY {
+			fmt.Print(makeResult(hash, sames, opt.PrintSourcePathOnly))
 			fmt.Print(sep)
-		} else if len(sames) == 0 && showMode != SHOW_EXISTS_ONLY {
-			fmt.Print(makeResult(hash, sames, printSourcePathOnly))
+		} else if len(sames) == 0 && opt.ShowMode != SHOW_EXISTS_ONLY {
+			fmt.Print(makeResult(hash, sames, opt.PrintSourcePathOnly))
 			fmt.Print(sep)
 		}
 	}
