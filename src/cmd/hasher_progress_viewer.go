@@ -58,7 +58,7 @@ func (p HasherProgressViewer) Progress(workerId int, done int, total int, path s
 
 	fmt.Print(aec.Down(uint(workerId)))
 	fmt.Print("\x1b[0K") // delete line after cursor
-	fmt.Printf("[%d] : %s", workerId, path)
+	fmt.Printf("[Worker-%d] : %s", workerId, path)
 	fmt.Print(aec.NextLine(uint(p.NumOfWorkers - workerId)))
 	fmt.Printf("%d / %d", done, total)
 	fmt.Print(aec.PreviousLine(uint(p.NumOfWorkers)))

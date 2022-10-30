@@ -206,6 +206,9 @@ func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceU
 		select {
 		case r := <-results:
 			done++
+			if r.Err != nil {
+				watcher.ShowError(r.Err.Error())
+			}
 			watcher.Progress(r.WorkerId, done, remains, r.Task.Path)
 		case taskNum := <-inputDone:
 			remains = taskNum
@@ -257,8 +260,12 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 
 func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResult, alg *HashAlg, forceUpdate bool) {
 	for t := range tasks {
-		_, hash, err := UpdateHash(t.Path, alg, forceUpdate)
-		results <- NewUpdateResult(id, t, hash, err)
+		_, hash, err := UpdateHash2(t.Path, alg, forceUpdate)
+		hashValue := ""
+		if err == nil {
+			hashValue = hash.String()
+		}
+		results <- NewUpdateResult(id, t, hashValue, err)
 	}
 }
 
