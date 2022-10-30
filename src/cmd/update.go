@@ -93,46 +93,6 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 	return status, errorStatus
 }
 
-// func updateHashRecursively(dirPath string, alg *core.HashAlg, forceUpdate bool, verbose bool) error {
-// 	// TODO: delete
-// 	totalCount, err := CountFiles(dirPath, verbose)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	count := 1
-//
-// 	if verbose {
-// 		HideCursor()
-// 	}
-// 	err = filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, err error) error {
-// 		if err != nil {
-// 			return errors.Wrap(err, "failed to filepath.Walk")
-// 		}
-//
-// 		if info.IsDir() {
-// 			return nil
-// 		}
-//
-// 		if verbose {
-// 			fmt.Printf("\x1b7\x1b[0J%d/%d %s\x1b8", count, totalCount, path)
-// 		}
-// 		_, _, updateErr := core.UpdateHash(path, alg, forceUpdate)
-// 		if updateErr != nil {
-// 			fmt.Fprintf(os.Stderr, "\nFailed to update hash : %s (reason : %s)\n", path, updateErr.Error())
-// 		}
-// 		count++
-//
-// 		return nil
-// 	})
-// 	if verbose {
-// 		fmt.Printf("\n")
-// 		ShowCursor()
-// 	}
-//
-// 	return err
-// }
-
 func updateHashConcurrently(dirPaths []string, alg *core.HashAlg, forceUpdate bool, verbose bool) error {
 	numOfWorkers := 1
 	viewer := NewHasherProgressViewer(numOfWorkers, verbose)
