@@ -75,6 +75,17 @@ func IsDirectory(path string) (bool, error) {
 	return info.Mode().IsDir(), nil
 }
 
+func EnsureDirectory(path string) error {
+	isDir, err := IsDirectory(path)
+	if err != nil {
+		return err
+	}
+	if !isDir {
+		return fmt.Errorf("Not a directory : %s", path)
+	}
+	return nil
+}
+
 func CleanPath(path string) (string, error) {
 	if len(path) > 1 && path[0:2] == "~/" {
 		homeDir, err := os.UserHomeDir()

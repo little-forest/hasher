@@ -11,6 +11,7 @@ import (
 	"time"
 
 	. "github.com/little-forest/hasher/common"
+	"github.com/pkg/errors"
 )
 
 const hashBufSize = 256 * 1024
@@ -280,4 +281,47 @@ func adjustNumOfWorkers(numOfWorkers int, numOfCPU int) int {
 		return numOfCPU - 1
 	}
 	return numOfWorkers
+}
+
+func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatcher, verbose bool) error {
+	total, err := CountAllFiles(dirPaths, watcher.IsVerbose())
+	if err != nil {
+		return err
+	}
+
+	watcher.SetTotal(total)
+	watcher.Setup()
+
+	count := 1
+	for _, dp := range dirPaths {
+		err = filepath.WalkDir(dp, func(path string, info fs.DirEntry, e error) error {
+			if e != nil {
+				return errors.Wrap(e, "failed to filepath.Walk")
+			}
+
+			if info.IsDir() {
+				return nil
+			}
+
+			if verbose {
+				watcher.Progress(0, count, total, path)
+			}
+			absPath, _ := filepath.Abs(path)
+			_, hash, e := UpdateHash2(absPath, alg, false)
+			if e != nil {
+				fmt.Fprintf(os.Stderr, "Failed to update hash : %s (reason : %s)\n", absPath, e.Error())
+			} else {
+				fmt.Fprintf(w, "%s\n", hash.DollyTsv())
+			}
+			count++
+			return nil
+		})
+		if err != nil {
+			break
+		}
+	}
+
+	watcher.TearDown()
+
+	return err
 }
