@@ -23,45 +23,45 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Flag_Compare_Source = "source"
-const Flag_Compare_Target = "target"
-const Flag_Compare_ShowExistsOnly = "exists-only"
-const Flag_Compare_ShowMissingOnly = "missing-only"
-const Flag_Compare_PrintSourcePathOnly = "print-source-path-only"
-const Flag_Compare_PrintZero = "print0"
+const Flag_Duplication_Source = "source"
+const Flag_Duplication_Target = "target"
+const Flag_Duplication_ShowExistsOnly = "exists-only"
+const Flag_Duplication_ShowMissingOnly = "missing-only"
+const Flag_Duplication_PrintSourcePathOnly = "print-source-path-only"
+const Flag_Duplication_PrintZero = "print0"
 
 const SHOW_ALWAYS = 0
 const SHOW_EXISTS_ONLY = 1
 const SHOW_MISSING_ONLY = 2
 
-// compareCmd represents the compare command
-var compareCmd = &cobra.Command{
-	Use:   "compare -s (HASH_LIST_TSV|SOURCE_DIR) -t TARGET_DIR",
-	Short: "Compare hashes",
+// checkDuplicationCmd represents the compare command
+var checkDuplicationCmd = &cobra.Command{
+	Use:   "duplicate -s (HASH_LIST_TSV|SOURCE_DIR) -t TARGET_DIR",
+	Short: "Check duplicated files",
 	Long:  ``,
-	RunE:  statusWrapper.RunE(runCompare),
+	RunE:  statusWrapper.RunE(runCheckDuplicated),
 }
 
 func init() {
-	rootCmd.AddCommand(compareCmd)
+	rootCmd.AddCommand(checkDuplicationCmd)
 
-	compareCmd.Flags().StringP(Flag_Compare_Source, "s", "", "source hash file")
-	compareCmd.Flags().StringP(Flag_Compare_Target, "t", "", "target hash file")
-	compareCmd.Flags().BoolP(Flag_Compare_ShowExistsOnly, "e", false, "show exist files only")
-	compareCmd.Flags().BoolP(Flag_Compare_ShowMissingOnly, "m", false, "show missing files only")
-	compareCmd.Flags().BoolP(Flag_Compare_PrintSourcePathOnly, "f", false, "print only source file path")
-	compareCmd.Flags().BoolP(Flag_Compare_PrintZero, "0", false, "separate by null character")
+	checkDuplicationCmd.Flags().StringP(Flag_Duplication_Source, "s", "", "source hash file")
+	checkDuplicationCmd.Flags().StringP(Flag_Duplication_Target, "t", "", "target hash file")
+	checkDuplicationCmd.Flags().BoolP(Flag_Duplication_ShowExistsOnly, "e", false, "show exist files only")
+	checkDuplicationCmd.Flags().BoolP(Flag_Duplication_ShowMissingOnly, "m", false, "show missing files only")
+	checkDuplicationCmd.Flags().BoolP(Flag_Duplication_PrintSourcePathOnly, "f", false, "print only source file path")
+	checkDuplicationCmd.Flags().BoolP(Flag_Duplication_PrintZero, "0", false, "separate by null character")
 }
 
-func runCompare(cmd *cobra.Command, args []string) (int, error) {
-	source, _ := cmd.Flags().GetString(Flag_Compare_Source)
-	target, _ := cmd.Flags().GetString(Flag_Compare_Target)
+func runCheckDuplicated(cmd *cobra.Command, args []string) (int, error) {
+	source, _ := cmd.Flags().GetString(Flag_Duplication_Source)
+	target, _ := cmd.Flags().GetString(Flag_Duplication_Target)
 
-	printSourcePathOnly, _ := cmd.Flags().GetBool(Flag_Compare_PrintSourcePathOnly)
-	printZero, _ := cmd.Flags().GetBool(Flag_Compare_PrintZero)
+	printSourcePathOnly, _ := cmd.Flags().GetBool(Flag_Duplication_PrintSourcePathOnly)
+	printZero, _ := cmd.Flags().GetBool(Flag_Duplication_PrintZero)
 
-	showExistsOnly, _ := cmd.Flags().GetBool(Flag_Compare_ShowExistsOnly)
-	showMissingOnly, _ := cmd.Flags().GetBool(Flag_Compare_ShowMissingOnly)
+	showExistsOnly, _ := cmd.Flags().GetBool(Flag_Duplication_ShowExistsOnly)
+	showMissingOnly, _ := cmd.Flags().GetBool(Flag_Duplication_ShowMissingOnly)
 
 	// check options
 	if showExistsOnly && showMissingOnly {
@@ -73,7 +73,7 @@ func runCompare(cmd *cobra.Command, args []string) (int, error) {
 	} else if showMissingOnly {
 		showMode = SHOW_MISSING_ONLY
 	}
-	opt := CompareOption{
+	opt := CheckDuplicationOption{
 		PrintSourcePathOnly: printSourcePathOnly,
 		PrintZero:           printZero,
 		ShowMode:            showMode,
@@ -104,17 +104,17 @@ func runCompare(cmd *cobra.Command, args []string) (int, error) {
 		return 1, err
 	}
 
-	result, err := doCompare(srcHashData, targetHashData, opt)
+	result, err := doCheckDuplication(srcHashData, targetHashData, opt)
 	return result, err
 }
 
-type CompareOption struct {
+type CheckDuplicationOption struct {
 	PrintSourcePathOnly bool
 	PrintZero           bool
 	ShowMode            int
 }
 
-func doCompare(src *core.HashStore, target *core.HashStore, opt CompareOption) (int, error) {
+func doCheckDuplication(src *core.HashStore, target *core.HashStore, opt CheckDuplicationOption) (int, error) {
 	sep := "\n"
 	if opt.PrintZero {
 		sep = "\x00"
