@@ -110,19 +110,6 @@ func updateHashCheckedTime(f *os.File) error {
 	return nil
 }
 
-// func CalcFileHash(path string, alg *HashAlg) (string, error) {
-// 	r, err := OpenFile(path)
-// 	// nolint:staticcheck,errcheck
-// 	defer r.Close()
-// 	if err != nil {
-// 		return "", err
-// 	}
-//
-// 	hash, err := calcHashString(r, alg)
-//
-// 	return hash, err
-// }
-
 func CalcHash(path string, hashAlg *HashAlg) (*Hash, error) {
 	if !hashAlg.Alg.Available() {
 		return nil, fmt.Errorf("no implementation")
@@ -143,13 +130,30 @@ func CalcHash(path string, hashAlg *HashAlg) (*Hash, error) {
 	return NewHash(path, hashAlg, hash.Sum(nil), info.ModTime().Unix()), nil
 }
 
-// func calcHashString(r io.Reader, hashAlg *HashAlg) (string, error) {
-// 	hash, err := calcHash(r, hashAlg)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	return hash.String(), nil
-// }
+// Get hash value.
+// This function will not check hash is updated.
+// When given file's hash has not been calculated, it will return nil.
+func GetHash(path string, alg *HashAlg) (*Hash, error) {
+	file, err := OpenFile(path)
+	if err != nil {
+		return nil, err
+	}
+	// nolint:errcheck
+	defer file.Close()
+
+	info, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	curHash := GetXattr(file, alg.AttrName)
+	if curHash != "" {
+		hash, _ := NewHashFromString(path, alg, curHash, info.ModTime().Unix())
+		return hash, nil
+	} else {
+		return nil, nil
+	}
+}
 
 type UpdateTask struct {
 	Path string
@@ -283,7 +287,7 @@ func adjustNumOfWorkers(numOfWorkers int, numOfCPU int) int {
 	return numOfWorkers
 }
 
-func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatcher, verbose bool) error {
+func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatcher, verbose bool, noCheck bool) error {
 	total, err := CountAllFiles(dirPaths, watcher.IsVerbose())
 	if err != nil {
 		return err
@@ -306,12 +310,22 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatc
 			if verbose {
 				watcher.Progress(0, count, total, path)
 			}
+
+			var hash *Hash
 			absPath, _ := filepath.Abs(path)
-			_, hash, e := UpdateHash2(absPath, alg, false)
+			if !noCheck {
+				_, hash, e = UpdateHash2(absPath, alg, false)
+			} else {
+				hash, e = GetHash(absPath, alg)
+			}
 			if e != nil {
 				fmt.Fprintf(os.Stderr, "Failed to update hash : %s (reason : %s)\n", absPath, e.Error())
 			} else {
-				fmt.Fprintf(w, "%s\n", hash.DollyTsv())
+				if hash == nil {
+					fmt.Fprintf(os.Stderr, "No hash data : %s\n", absPath)
+				} else {
+					fmt.Fprintf(w, "%s\n", hash.DollyTsv())
+				}
 			}
 			count++
 			return nil
