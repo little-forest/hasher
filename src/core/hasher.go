@@ -30,20 +30,6 @@ const Xattr_hashCheckedTime = Xattr_prefix + ".htime"
 // Update specified file's hash value
 //
 //	changed : bool
-//	hash value : string
-//	error : error
-func UpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, error) {
-	changed, hash, err := UpdateHash2(path, alg, forceUpdate)
-	if err != nil {
-		return changed, "", err
-	} else {
-		return changed, hash.String(), err
-	}
-}
-
-// Update specified file's hash value
-//
-//	changed : bool
 //	hash value : *Hash
 //	error : error
 func UpdateHash2(path string, alg *HashAlg, forceUpdate bool) (bool, *Hash, error) {
