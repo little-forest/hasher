@@ -25,6 +25,7 @@ import (
 )
 
 const Flag_ListHash_Out = "out"
+const Flag_ListHash_NoCheck = "no-check"
 
 // listHashCmd represents the listHash command
 var listHashCmd = &cobra.Command{
@@ -38,13 +39,15 @@ func init() {
 	rootCmd.AddCommand(listHashCmd)
 
 	listHashCmd.Flags().StringP(Flag_ListHash_Out, "o", "", "output file path")
+	listHashCmd.Flags().BoolP(Flag_ListHash_NoCheck, "n", false, "Do not check if the hash is up-to-date. This may result in fast processing but incorrect results.")
 }
 
 func runListHash(cmd *cobra.Command, args []string) (int, error) {
 	out, _ := cmd.Flags().GetString(Flag_ListHash_Out)
+	noCheck, _ := cmd.Flags().GetBool(Flag_ListHash_NoCheck)
 	alg := core.NewDefaultHashAlg()
 
-	err := listHashAll(args, alg, out)
+	err := listHashAll(args, alg, out, noCheck)
 	if err != nil {
 		return 1, err
 	} else {
@@ -52,7 +55,7 @@ func runListHash(cmd *cobra.Command, args []string) (int, error) {
 	}
 }
 
-func listHashAll(dirPaths []string, alg *core.HashAlg, outPath string) error {
+func listHashAll(dirPaths []string, alg *core.HashAlg, outPath string, noCheck bool) error {
 	// check directory
 	for _, p := range dirPaths {
 		if err := EnsureDirectory(p); err != nil {
@@ -77,6 +80,6 @@ func listHashAll(dirPaths []string, alg *core.HashAlg, outPath string) error {
 
 	watcher := NewHasherProgressViewer(1, verbose)
 
-	err := core.ListHash(dirPaths, core.NewDefaultHashAlg(), writer, watcher, verbose)
+	err := core.ListHash(dirPaths, core.NewDefaultHashAlg(), writer, watcher, verbose, noCheck)
 	return err
 }
