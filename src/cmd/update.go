@@ -65,13 +65,13 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 				continue
 			} else {
 				// update file
-				changed, hash, err := core.UpdateHash(p, alg, forceUpdate)
+				changed, hash, err := core.UpdateHash2(p, alg, forceUpdate)
 				if err == nil && verbose {
 					mark := ""
 					if changed {
 						mark = "*"
 					}
-					fmt.Fprintf(os.Stdout, "%s  %s %s\n", p, hash, mark)
+					fmt.Fprintf(os.Stdout, "%s  %s %s\n", p, hash.String(), mark)
 				}
 			}
 
