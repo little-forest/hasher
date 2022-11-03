@@ -71,7 +71,7 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 					if changed {
 						mark = "*"
 					}
-					fmt.Fprintf(os.Stdout, "%s  %s %s\n", p, hash, mark)
+					fmt.Fprintf(os.Stdout, "%s  %s %s\n", p, hash.String(), mark)
 				}
 			}
 

@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/hex"
 	"os"
 	"path/filepath"
 	"time"
@@ -35,7 +34,6 @@ func NewFileDiff(filePath string, alg *HashAlg) (*FileDiff, error) {
 		return nil, err
 	}
 
-	hashBytes, _ := hex.DecodeString(hash)
 	basename := filepath.Base(filePath)
 
 	info, err := os.Stat(filePath)
@@ -47,7 +45,7 @@ func NewFileDiff(filePath string, alg *HashAlg) (*FileDiff, error) {
 	d := &FileDiff{
 		Basename:     basename,
 		PairFileName: "",
-		HashValue:    hashBytes,
+		HashValue:    hash.Value,
 		ModTime:      modtime,
 		Status:       UNKNOWN,
 	}

@@ -14,7 +14,7 @@ func TestUpdateHash(t *testing.T) {
 	changed, hash, err := UpdateHash(path, alg, false)
 
 	assert.NoError(t, err)
-	assert.Equal(t, expectedHash, hash)
+	assert.Equal(t, expectedHash, hash.String())
 	assert.True(t, changed)
 	// f, err := os.Open(path)
 	// assert.NoError(t, err)

@@ -66,5 +66,5 @@ func compare(path1 string, path2 string) (bool, error) {
 		return false, err
 	}
 
-	return (hash1 == hash2), nil
+	return (hash1.String() == hash2.String()), nil
 }

@@ -30,23 +30,9 @@ const Xattr_hashCheckedTime = Xattr_prefix + ".htime"
 // Update specified file's hash value
 //
 //	changed : bool
-//	hash value : string
-//	error : error
-func UpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, string, error) {
-	changed, hash, err := UpdateHash2(path, alg, forceUpdate)
-	if err != nil {
-		return changed, "", err
-	} else {
-		return changed, hash.String(), err
-	}
-}
-
-// Update specified file's hash value
-//
-//	changed : bool
 //	hash value : *Hash
 //	error : error
-func UpdateHash2(path string, alg *HashAlg, forceUpdate bool) (bool, *Hash, error) {
+func UpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, *Hash, error) {
 	file, err := OpenFile(path)
 	if err != nil {
 		return false, nil, err
@@ -265,7 +251,7 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 
 func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResult, alg *HashAlg, forceUpdate bool) {
 	for t := range tasks {
-		_, hash, err := UpdateHash2(t.Path, alg, forceUpdate)
+		_, hash, err := UpdateHash(t.Path, alg, forceUpdate)
 		hashValue := ""
 		if err == nil {
 			hashValue = hash.String()
@@ -314,7 +300,7 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatc
 			var hash *Hash
 			absPath, _ := filepath.Abs(path)
 			if !noCheck {
-				_, hash, e = UpdateHash2(absPath, alg, false)
+				_, hash, e = UpdateHash(absPath, alg, false)
 			} else {
 				hash, e = GetHash(absPath, alg)
 			}
