@@ -65,7 +65,7 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 				continue
 			} else {
 				// update file
-				changed, hash, err := core.UpdateHash2(p, alg, forceUpdate)
+				changed, hash, err := core.UpdateHash(p, alg, forceUpdate)
 				if err == nil && verbose {
 					mark := ""
 					if changed {

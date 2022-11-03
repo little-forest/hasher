@@ -11,7 +11,7 @@ func TestUpdateHash(t *testing.T) {
 	alg := NewDefaultHashAlg()
 	path, expectedHash := makeSingleDummyFile(t, &alg.Alg)
 
-	changed, hash, err := UpdateHash2(path, alg, false)
+	changed, hash, err := UpdateHash(path, alg, false)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedHash, hash.String())

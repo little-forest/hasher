@@ -147,7 +147,7 @@ func MakeHashDataFromDirectory(dirPath string, alg *HashAlg, verbose bool) (*Has
 			fmt.Printf("verbose\n")
 		}
 		absPath, _ := filepath.Abs(path)
-		_, hash, e := UpdateHash2(absPath, alg, false)
+		_, hash, e := UpdateHash(absPath, alg, false)
 		if e != nil {
 			fmt.Fprintf(os.Stderr, "Failed to update hash : %s (reason : %s)\n", absPath, e.Error())
 		} else {
