@@ -69,7 +69,7 @@ func IsDirectory(path string) (bool, error) {
 	info, err := os.Stat(path)
 
 	if err != nil {
-		return false, fmt.Errorf("can't stat file : %s", path)
+		return false, fmt.Errorf("can't stat file : %s (%s)", path, err)
 	}
 
 	return info.Mode().IsDir(), nil
@@ -84,6 +84,28 @@ func EnsureDirectory(path string) error {
 		return fmt.Errorf("Not a directory : %s", path)
 	}
 	return nil
+}
+
+func EnsureRegularFile(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if info.Mode().IsDir() {
+		return fmt.Errorf("directory : %s", path)
+	}
+	if info.Mode()&os.ModeSymlink == os.ModeSymlink {
+		return fmt.Errorf("symboliclink : %s", path)
+	}
+	return nil
+}
+
+func IsSymbolicLink(path string) (bool, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return false, err
+	}
+	return info.Mode()&os.ModeSymlink == os.ModeSymlink, nil
 }
 
 func CleanPath(path string) (string, error) {
