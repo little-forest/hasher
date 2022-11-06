@@ -57,3 +57,19 @@ func (h Hash) DollyTsv() string {
 	basename := filepath.Base(h.Path)
 	return fmt.Sprintf("%s\t%s\t%d\t%s:%s", h.Path, basename, h.ModTime, h.Alg.AlgName, h.String())
 }
+
+func (h Hash) HasSameHashValue(other *Hash) bool {
+	if other == nil {
+		return false
+	}
+	if len(h.Value) != len(other.Value) {
+		return false
+	}
+
+	for i, b := range h.Value {
+		if b != other.Value[i] {
+			return false
+		}
+	}
+	return true
+}

@@ -17,65 +17,129 @@ package cmd
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
-	"path/filepath"
 
 	. "github.com/little-forest/hasher/common"
 	"github.com/little-forest/hasher/core"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
+
+const Flag_Find_NoHash = "no-hash"
+const Flag_Find_HasHash = "has-hash"
+const Flag_Find_File = "file"
 
 // findCmd represents the find command
 var findCmd = &cobra.Command{
 	Use:   "find [path ...]",
-	Short: "find files which has hash attribute.",
+	Short: "Find files which has hash attribute.",
 	Long:  ``,
-	RunE:  statusWrapper.RunE(runFind),
+	Example: `
+  (1) Find files that have no hash value on XAttr from directories 
+        hasher find -n DIR...
+
+  (2) Find files that have hash value on XAttr from directories
+        hasher find -e DIR...
+
+  (3) Find files that have same hash value as given SRCFILE from directories
+        hasher find -f SRCFILE DIR...
+`,
+	RunE: statusWrapper.RunE(runFind),
 }
 
 func init() {
 	rootCmd.AddCommand(findCmd)
+
+	findCmd.Flags().BoolP(Flag_Find_NoHash, "n", false, "Find files that has no hash value on XAttr")
+	findCmd.Flags().BoolP(Flag_Find_HasHash, "e", false, "Find files that have hash value on XAttr")
+	findCmd.Flags().StringP(Flag_Find_File, "f", "", "Find files that have same hash value as given file")
+	findCmd.MarkFlagsMutuallyExclusive(Flag_Find_NoHash, Flag_Find_HasHash, Flag_Find_File)
 }
 
 func runFind(cmd *cobra.Command, args []string) (int, error) {
+	findNoHash, _ := cmd.Flags().GetBool(Flag_Find_NoHash)
+	findHasHash, _ := cmd.Flags().GetBool(Flag_Find_HasHash)
+	srcFile, _ := cmd.Flags().GetString(Flag_Find_File)
 
-	for _, rootDir := range args {
-		err := doFind(rootDir)
-		if err != nil {
-			return 1, errors.Wrap(err, fmt.Sprintf("failed to walk : %s", rootDir))
+	alg := core.NewDefaultHashAlg()
+	if findNoHash {
+		w := &findNoHashWalker{Alg: alg}
+		if err := WalkDirs(args, w); err != nil {
+			return 1, err
+		} else {
+			return 0, nil
+		}
+	} else if findHasHash {
+		w := &findHasHashWalker{Alg: alg}
+		if err := WalkDirs(args, w); err != nil {
+			return 1, err
+		} else {
+			return 0, nil
+		}
+	} else if srcFile != "" {
+		if err := findSameHashFile(alg, srcFile, args); err != nil {
+			return 1, err
+		} else {
+			return 0, nil
 		}
 	}
-	return 0, nil
+	return 1, fmt.Errorf("Invalid argument")
 }
 
-func doFind(rootDir string) error {
-	hashAlg := core.NewDefaultHashAlg()
-	err := filepath.WalkDir(rootDir, func(path string, info fs.DirEntry, err error) error {
-		if err != nil {
-			return errors.Wrap(err, "failed to filepath.Walk")
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		if hash, _ := getHashXattr(path, hashAlg); hash != "" {
-			fmt.Printf("%s\t%s\n", path, hash)
-		}
-		return nil
-	})
-	return err
+type findNoHashWalker struct {
+	Alg *core.HashAlg
 }
 
-func getHashXattr(path string, hashAlg *core.HashAlg) (string, error) {
-	f, err := OpenFile(path)
+func (w findNoHashWalker) Deal(f *os.File) error {
+	hash, err := core.GetHash(f.Name(), w.Alg)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to open : %s (%s)", path, err.Error())
-		return "", err
+		return err
+	}
+	if hash == nil {
+		fmt.Printf("%s\n", f.Name())
+	}
+	return nil
+}
+
+type findHasHashWalker struct {
+	Alg *core.HashAlg
+}
+
+func (w findHasHashWalker) Deal(f *os.File) error {
+	hash, err := core.GetHash(f.Name(), w.Alg)
+	if err != nil {
+		return err
+	}
+	if hash != nil {
+		fmt.Println(hash.DollyTsv())
+	}
+	return nil
+}
+
+type findSameHashWalker struct {
+	Alg    *core.HashAlg
+	Source *core.Hash
+}
+
+func (w findSameHashWalker) Deal(f *os.File) error {
+	_, hash, err := core.UpdateHash(f.Name(), w.Alg, false)
+	if err != nil {
+		return err
+	}
+	if hash != nil && w.Source.HasSameHashValue(hash) {
+		fmt.Println(hash.DollyTsv())
+	}
+	return nil
+}
+
+func findSameHashFile(alg *core.HashAlg, srcPath string, targetDirs []string) error {
+	if err := EnsureRegularFile(srcPath); err != nil {
+		return err
+	}
+	_, srcHash, err := core.UpdateHash(srcPath, alg, false)
+	if err != nil {
+		return err
 	}
 
-	hash := core.GetXattr(f, hashAlg.AttrName)
-	return hash, nil
+	w := &findSameHashWalker{Alg: alg, Source: srcHash}
+	return WalkDirs(targetDirs, w)
 }
