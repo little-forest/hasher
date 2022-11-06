@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"io/fs"
@@ -282,6 +283,10 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatc
 	watcher.SetTotal(total)
 	watcher.Setup()
 
+	bw := bufio.NewWriter(w)
+	// nolint:errcheck
+	defer bw.Flush()
+
 	count := 1
 	for _, dp := range dirPaths {
 		err = filepath.WalkDir(dp, func(path string, info fs.DirEntry, e error) error {
@@ -310,7 +315,7 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatc
 				if hash == nil {
 					fmt.Fprintf(os.Stderr, "No hash data : %s\n", absPath)
 				} else {
-					fmt.Fprintf(w, "%s\n", hash.DollyTsv())
+					fmt.Fprintf(bw, "%s\n", hash.DollyTsv())
 				}
 			}
 			count++
