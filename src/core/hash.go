@@ -53,7 +53,7 @@ func (h Hash) Json() string {
 	return fmt.Sprintf("{\"path\": \"%s\", \"hash\": \"%s:%s\"}", h.Path, h.Alg.AlgName, h.String())
 }
 
-func (h Hash) DollyTsv() string {
+func (h Hash) Tsv() string {
 	basename := filepath.Base(h.Path)
 	return fmt.Sprintf("%s\t%s\t%d\t%s:%s", h.Path, basename, h.ModTime, h.Alg.AlgName, h.String())
 }

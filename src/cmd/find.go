@@ -110,7 +110,7 @@ func (w findHasHashWalker) Deal(f *os.File) error {
 		return err
 	}
 	if hash != nil {
-		fmt.Println(hash.DollyTsv())
+		fmt.Println(hash.Tsv())
 	}
 	return nil
 }
@@ -126,7 +126,7 @@ func (w findSameHashWalker) Deal(f *os.File) error {
 		return err
 	}
 	if hash != nil && w.Source.HasSameHashValue(hash) {
-		fmt.Println(hash.DollyTsv())
+		fmt.Println(hash.Tsv())
 	}
 	return nil
 }
