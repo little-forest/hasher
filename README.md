@@ -1,5 +1,11 @@
 # hasher
 
+# Install
+
+```
+curl -Lo - https://github.com/little-forest/hasher/releases/download/v0.0.7/hasher_linux_x86_64.tar.gz | tar zxvf -
+```
+
 # For developers
 
 ## Local build
