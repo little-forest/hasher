@@ -315,7 +315,7 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatc
 				if hash == nil {
 					fmt.Fprintf(os.Stderr, "No hash data : %s\n", absPath)
 				} else {
-					fmt.Fprintf(bw, "%s\n", hash.DollyTsv())
+					fmt.Fprintf(bw, "%s\n", hash.Tsv())
 				}
 			}
 			count++
