@@ -283,7 +283,7 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatc
 	watcher.SetTotal(total)
 	watcher.Setup()
 
-	bw := bufio.NewWriter(w)
+	bw := bufio.NewWriterSize(w, 16384)
 	// nolint:errcheck
 	defer bw.Flush()
 
