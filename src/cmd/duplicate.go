@@ -36,7 +36,7 @@ const SHOW_MISSING_ONLY = 2
 
 // checkDuplicationCmd represents the compare command
 var checkDuplicationCmd = &cobra.Command{
-	Use:   "duplicate -s (HASH_LIST_TSV|SOURCE_DIR) -t TARGET_DIR",
+	Use:   "duplicate -s (HASH_LIST_TSV|SOURCE_DIR) -t (HASH_LIST_TSV|TARGET_DIR)",
 	Short: "Check duplicated files",
 	Long:  ``,
 	RunE:  statusWrapper.RunE(runCheckDuplicated),
@@ -79,33 +79,42 @@ func runCheckDuplicated(cmd *cobra.Command, args []string) (int, error) {
 		ShowMode:            showMode,
 	}
 
-	// make source hash store
-	var srcHashData *core.HashStore
 	alg := core.NewDefaultHashAlg()
-	isDir, err := IsDirectory(source)
+
+	// make source hash store
+	srcHashData, err := loadHashData(source, alg)
 	if err != nil {
 		return 1, err
 	}
-	if isDir {
-		srcHashData, err = core.MakeHashDataFromDirectory(source, alg, false)
-		if err != nil {
-			return 1, err
-		}
-	} else {
-		srcHashData, err = core.LoadHashData(source)
-		if err != nil {
-			return 1, err
-		}
-	}
 
 	// make target hash store
-	targetHashData, err := core.LoadHashData(target)
+	targetHashData, err := loadHashData(target, alg)
 	if err != nil {
 		return 1, err
 	}
 
 	result, err := doCheckDuplication(srcHashData, targetHashData, opt)
 	return result, err
+}
+
+func loadHashData(srcPath string, alg *core.HashAlg) (*core.HashStore, error) {
+	var store *core.HashStore
+	isDir, err := IsDirectory(srcPath)
+	if err != nil {
+		return nil, err
+	}
+	if isDir {
+		store, err = core.MakeHashDataFromDirectory(srcPath, alg, false)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		store, err = core.LoadHashData(srcPath)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return store, err
 }
 
 type CheckDuplicationOption struct {
