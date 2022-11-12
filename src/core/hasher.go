@@ -219,6 +219,12 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 	var numFiles int
 
 	for _, p := range paths {
+		// skip symbolic link
+		isSym, err := IsSymbolicLink(p)
+		if err != nil || isSym {
+			continue
+		}
+
 		s, err := os.Stat(p)
 		if err != nil {
 			// TODO: error handling
@@ -226,7 +232,6 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 		}
 
 		if !s.IsDir() {
-			// TODO: skip symlink
 			tasks <- NewUpdateTask(p)
 			numFiles++
 			continue
@@ -238,6 +243,15 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 		err = filepath.WalkDir(p, func(path string, info fs.DirEntry, err error) error {
 			if err != nil {
 				return err
+			}
+			// skip symbolic link
+			isSym, err := IsSymbolicLink(p)
+			if err != nil {
+				return err
+			}
+			// skip symbolic link
+			if isSym {
+				return nil
 			}
 			if !info.IsDir() {
 				tasks <- NewUpdateTask(path)
