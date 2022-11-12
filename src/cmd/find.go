@@ -63,14 +63,14 @@ func runFind(cmd *cobra.Command, args []string) (int, error) {
 	alg := core.NewDefaultHashAlg()
 	if findNoHash {
 		w := &findNoHashWalker{Alg: alg}
-		if err := WalkDirs(args, w); err != nil {
+		if err := WalkDirsWithWalker(args, w); err != nil {
 			return 1, err
 		} else {
 			return 0, nil
 		}
 	} else if findHasHash {
 		w := &findHasHashWalker{Alg: alg}
-		if err := WalkDirs(args, w); err != nil {
+		if err := WalkDirsWithWalker(args, w); err != nil {
 			return 1, err
 		} else {
 			return 0, nil
@@ -141,5 +141,5 @@ func findSameHashFile(alg *core.HashAlg, srcPath string, targetDirs []string) er
 	}
 
 	w := &findSameHashWalker{Alg: alg, Source: srcHash}
-	return WalkDirs(targetDirs, w)
+	return WalkDirsWithWalker(targetDirs, w)
 }

@@ -12,7 +12,13 @@ type FileWalker interface {
 	Deal(file *os.File) error
 }
 
-func WalkDirs(dirPaths []string, walker FileWalker) error {
+func WalkDirsWithWalker(dirPaths []string, walker FileWalker) error {
+	return WalkDirs(dirPaths, func(f *os.File) error {
+		return walker.Deal(f)
+	})
+}
+
+func WalkDirs(dirPaths []string, dealFile func(file *os.File) error) error {
 	// check dirctories
 	for _, path := range dirPaths {
 		err := EnsureDirectory(path)
@@ -47,7 +53,7 @@ func WalkDirs(dirPaths []string, walker FileWalker) error {
 			// nolint:errcheck
 			defer f.Close()
 
-			walkError := walker.Deal(f)
+			walkError := dealFile(f)
 			return walkError
 		})
 		if err != nil {
@@ -55,4 +61,5 @@ func WalkDirs(dirPaths []string, walker FileWalker) error {
 		}
 	}
 	return nil
+
 }
