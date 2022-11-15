@@ -5,7 +5,8 @@ type ProgressWatcher interface {
 	SetTotal(total int)
 	IsVerbose() bool
 	Setup()
-	Progress(workerId int, done int, total int, path string)
-	ShowError(msg string)
+	TaskStart(workerId int, taskName string)
+	TaskDone(workerId int, done int, total int, message string)
+	ShowError(message string)
 	TearDown()
 }

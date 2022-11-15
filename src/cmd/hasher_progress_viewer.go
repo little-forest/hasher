@@ -15,13 +15,17 @@ import (
 type HasherProgressViewer struct {
 	NumOfWorkers int
 	Verbose      bool
+	done         int
 	total        int
+	messages     []string
 }
 
 func NewHasherProgressViewer(numOfWorkers int, verbose bool) *HasherProgressViewer {
 	return &HasherProgressViewer{
 		NumOfWorkers: numOfWorkers,
 		Verbose:      verbose,
+		total:        -1,
+		messages:     make([]string, numOfWorkers),
 	}
 }
 
@@ -45,23 +49,45 @@ func (p HasherProgressViewer) Setup() {
 	fmt.Print(aec.Up(uint(row)))
 }
 
-func (p HasherProgressViewer) Progress(workerId int, done int, total int, path string) {
+func (p *HasherProgressViewer) updatePrograss(done int, total int) {
+	if done >= 0 {
+		p.done = done
+	}
+
+	if p.total < 0 && total >= 0 {
+		p.total = total
+	}
+}
+
+func (p *HasherProgressViewer) showTaskMessage(workerId int) {
+	fmt.Print(aec.Down(uint(workerId)))
+	fmt.Print("\x1b[0K") // delete line after cursor
+	fmt.Printf("[Worker-%d] : %s", workerId, p.messages[workerId])
+	fmt.Print(aec.NextLine(uint(p.NumOfWorkers - workerId)))
+	fmt.Printf("%d / %d", p.done, p.total)
+	fmt.Print(aec.PreviousLine(uint(p.NumOfWorkers)))
+}
+
+func (p *HasherProgressViewer) TaskStart(workerId int, path string) {
 	if !p.Verbose {
 		return
 	}
 
-	if total < 0 && p.total >= 0 {
-		total = p.total
+	p.messages[workerId] = chopPath(path)
+
+	p.showTaskMessage(workerId)
+}
+
+func (p *HasherProgressViewer) TaskDone(workerId int, done int, total int, message string) {
+	if !p.Verbose {
+		return
 	}
 
-	path = chopPath(path)
+	p.updatePrograss(done, total)
 
-	fmt.Print(aec.Down(uint(workerId)))
-	fmt.Print("\x1b[0K") // delete line after cursor
-	fmt.Printf("[Worker-%d] : %s", workerId, path)
-	fmt.Print(aec.NextLine(uint(p.NumOfWorkers - workerId)))
-	fmt.Printf("%d / %d", done, total)
-	fmt.Print(aec.PreviousLine(uint(p.NumOfWorkers)))
+	p.messages[workerId] = p.messages[workerId] + " " + message
+
+	p.showTaskMessage(workerId)
 }
 
 func (p HasherProgressViewer) ShowError(msg string) {
@@ -83,6 +109,7 @@ func (p HasherProgressViewer) TearDown() {
 	}
 	row := p.NumOfWorkers + 1
 	fmt.Print(aec.Down(uint(row)))
+	fmt.Println()
 	fmt.Print(aec.Show)
 }
 
