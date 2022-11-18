@@ -175,7 +175,10 @@ func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceU
 	if err != nil {
 		return err
 	}
+
 	watcher.SetTotal(total)
+	notifier := NewProgressNotifier(watcher)
+	notifier.Start()
 
 	numOfWorkers = adjustNumOfWorkers(numOfWorkers, runtime.NumCPU())
 
@@ -184,10 +187,8 @@ func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceU
 
 	// run workers
 	for i := 0; i < numOfWorkers; i++ {
-		go updateHashWorker(i, tasks, results, alg, forceUpdate, watcher)
+		go updateHashWorker(i, tasks, results, alg, forceUpdate, notifier)
 	}
-
-	watcher.Setup()
 
 	// collect target files
 	inputDone := make(chan int)
@@ -201,9 +202,9 @@ func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceU
 		case r := <-results:
 			done++
 			if r.Err != nil {
-				watcher.ShowError(r.Err.Error())
+				notifier.NotifyError(r.WorkerId, r.Err.Error())
 			}
-			watcher.TaskDone(r.WorkerId, done, remains, r.Message)
+			notifier.NotifyTaskDone(r.WorkerId, done, remains, r.Message)
 		case taskNum := <-inputDone:
 			remains = taskNum
 		}
@@ -212,7 +213,7 @@ func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceU
 		}
 	}
 
-	watcher.TearDown()
+	notifier.Shutdown()
 
 	return nil
 }
@@ -266,21 +267,21 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 	inputDone <- numFiles
 }
 
-func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResult, alg *HashAlg, forceUpdate bool, wathcher ProgressWatcher) {
+func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResult, alg *HashAlg, forceUpdate bool, notifier *ProgressNotifier) {
 	for t := range tasks {
-		wathcher.TaskStart(id, t.Path)
+		notifier.NotifyTaskStart(id, t.Path)
 		changed, hash, err := UpdateHash(t.Path, alg, forceUpdate)
 		hashValue := ""
 		msg := ""
 		if err == nil {
 			hashValue = hash.String()
 			if !changed {
-				msg = "[OK]"
+				msg = Mark_OK
 			} else {
 				msg = "[UPDATED]"
 			}
 		} else {
-			msg = "[FAILED]"
+			msg = Mark_Failed
 		}
 		results <- NewUpdateResult(id, t, hashValue, msg, err)
 	}
