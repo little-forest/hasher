@@ -199,12 +199,9 @@ func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceU
 	done := 0
 	for {
 		select {
-		case r := <-results:
+		case <-results:
 			done++
-			if r.Err != nil {
-				notifier.NotifyError(r.WorkerId, r.Err.Error())
-			}
-			notifier.NotifyTaskDone(r.WorkerId, done, remains, r.Message)
+			notifier.NotifyProgress(done, remains)
 		case taskNum := <-inputDone:
 			remains = taskNum
 		}
@@ -282,7 +279,9 @@ func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResu
 			}
 		} else {
 			msg = Mark_Failed
+			notifier.NotifyError(id, err.Error())
 		}
+		notifier.NotifyTaskDone(id, msg)
 		results <- NewUpdateResult(id, t, hashValue, msg, err)
 	}
 }
@@ -353,7 +352,8 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatc
 				} else {
 					msg = "[UPDATED]"
 				}
-				watcher.TaskDone(0, count, total, msg)
+				watcher.TaskDone(0, msg)
+				watcher.UpdateProgress(count, total)
 			}
 			return nil
 		})

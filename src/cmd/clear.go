@@ -114,7 +114,8 @@ func clearRecursively(dirPath string, verbose bool) error {
 			resultMsg = Mark_Failed
 		}
 		count++
-		v.TaskDone(0, count, totalCount, resultMsg)
+		v.TaskDone(0, resultMsg)
+		v.UpdateProgress(count, totalCount)
 
 		return nil
 	})

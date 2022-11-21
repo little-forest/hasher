@@ -24,9 +24,13 @@ type startEvent struct {
 
 type doneEvent struct {
 	commonEvent
-	Done    int
-	Total   int
 	Message string
+}
+
+type progressEvent struct {
+	commonEvent
+	Done  int
+	Total int
 }
 
 type errorEvent struct {
@@ -60,14 +64,20 @@ func (n ProgressNotifier) NotifyTaskStart(workerId int, taskName string) {
 	n.notifyQueue <- e
 }
 
-func (n ProgressNotifier) NotifyTaskDone(workerId int, done int, total int, message string) {
+func (n ProgressNotifier) NotifyTaskDone(workerId int, message string) {
 	e := doneEvent{
 		commonEvent: commonEvent{
 			workerId: workerId,
 		},
-		Done:    done,
-		Total:   total,
 		Message: message,
+	}
+	n.notifyQueue <- e
+}
+
+func (n ProgressNotifier) NotifyProgress(done int, total int) {
+	e := progressEvent{
+		Done:  done,
+		Total: total,
 	}
 	n.notifyQueue <- e
 }
@@ -105,7 +115,9 @@ func (n *ProgressNotifier) doStart() {
 		case startEvent:
 			n.watcher.TaskStart(e.workerId, e.TaskName)
 		case doneEvent:
-			n.watcher.TaskDone(e.workerId, e.Done, e.Total, e.Message)
+			n.watcher.TaskDone(e.workerId, e.Message)
+		case progressEvent:
+			n.watcher.UpdateProgress(e.Done, e.Total)
 		case errorEvent:
 			n.watcher.ShowError(e.Message)
 		default:

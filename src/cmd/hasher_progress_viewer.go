@@ -54,7 +54,7 @@ func (p *HasherProgressViewer) updatePrograss(done int, total int) {
 		p.done = done
 	}
 
-	if p.total < 0 && total >= 0 {
+	if total >= 0 {
 		p.total = total
 	}
 }
@@ -63,9 +63,11 @@ func (p *HasherProgressViewer) showTaskMessage(workerId int) {
 	fmt.Print(aec.Down(uint(workerId)))
 	fmt.Print("\x1b[0K") // delete line after cursor
 	fmt.Printf("[Worker-%d] : %s", workerId, p.messages[workerId])
-	fmt.Print(aec.NextLine(uint(p.NumOfWorkers - workerId)))
-	fmt.Printf("%d / %d", p.done, p.total)
-	fmt.Print(aec.PreviousLine(uint(p.NumOfWorkers)))
+	if workerId > 0 {
+		fmt.Print(aec.PreviousLine(uint(workerId)))
+	} else {
+		fmt.Print("\x1b[1G") // Move to top of current line
+	}
 }
 
 func (p *HasherProgressViewer) TaskStart(workerId int, path string) {
@@ -78,12 +80,10 @@ func (p *HasherProgressViewer) TaskStart(workerId int, path string) {
 	p.showTaskMessage(workerId)
 }
 
-func (p *HasherProgressViewer) TaskDone(workerId int, done int, total int, message string) {
+func (p *HasherProgressViewer) TaskDone(workerId int, message string) {
 	if !p.Verbose {
 		return
 	}
-
-	p.updatePrograss(done, total)
 
 	p.messages[workerId] = p.messages[workerId] + " " + message
 
@@ -101,6 +101,18 @@ func (p HasherProgressViewer) ShowError(msg string) {
 	}
 	// TODO: when stderr is redirected to file, display is broken
 	fmt.Fprintln(os.Stderr, C_lred.Apply(msg))
+}
+
+func (p *HasherProgressViewer) UpdateProgress(done int, total int) {
+	p.updatePrograss(done, total)
+
+	if !p.Verbose {
+		return
+	}
+
+	fmt.Print(aec.NextLine(uint(p.NumOfWorkers)))
+	fmt.Printf("%d / %d", p.done, p.total)
+	fmt.Print(aec.PreviousLine(uint(p.NumOfWorkers)))
 }
 
 func (p HasherProgressViewer) TearDown() {
