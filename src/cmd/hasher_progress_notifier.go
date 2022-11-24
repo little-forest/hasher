@@ -251,4 +251,4 @@ func (n HasherProgressNotifier) chopPath(path string) string {
 }
 
 // check implementation
-var _ core.ProgressNotifier2 = &HasherProgressNotifier{}
+var _ core.ProgressNotifier = &HasherProgressNotifier{}

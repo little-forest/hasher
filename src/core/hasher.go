@@ -170,7 +170,7 @@ func NewUpdateResult(workerId int, task UpdateTask, hash string, message string,
 	}
 }
 
-func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceUpdate bool, notifier ProgressNotifier2) error {
+func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceUpdate bool, notifier ProgressNotifier) error {
 	total, err := CountAllFiles(paths, notifier.IsVerbose())
 	if err != nil {
 		return err
@@ -263,7 +263,7 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 	inputDone <- numFiles
 }
 
-func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResult, alg *HashAlg, forceUpdate bool, notifier ProgressNotifier2) {
+func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResult, alg *HashAlg, forceUpdate bool, notifier ProgressNotifier) {
 	for t := range tasks {
 		notifier.NotifyTaskStart(id, t.Path)
 		changed, hash, err := UpdateHash(t.Path, alg, forceUpdate)
@@ -298,14 +298,14 @@ func adjustNumOfWorkers(numOfWorkers int, numOfCPU int) int {
 	return numOfWorkers
 }
 
-func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatcher, verbose bool, noCheck bool) error {
+func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifier, verbose bool, noCheck bool) error {
 	total, err := CountAllFiles(dirPaths, watcher.IsVerbose())
 	if err != nil {
 		return err
 	}
 
 	watcher.SetTotal(total)
-	watcher.Setup()
+	watcher.Start()
 
 	bw := bufio.NewWriterSize(w, 16384)
 	// nolint:errcheck
@@ -323,7 +323,7 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatc
 			}
 
 			if verbose {
-				watcher.TaskStart(0, path)
+				watcher.NotifyTaskStart(0, path)
 			}
 
 			var hash *Hash
@@ -351,8 +351,8 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatc
 				} else {
 					msg = "[UPDATED]"
 				}
-				watcher.TaskDone(0, msg)
-				watcher.UpdateProgress(count, total)
+				watcher.NotifyTaskDone(0, msg)
+				watcher.NotifyProgress(count, total)
 			}
 			return nil
 		})
@@ -361,7 +361,7 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatc
 		}
 	}
 
-	watcher.TearDown()
+	watcher.Shutdown()
 
 	return err
 }

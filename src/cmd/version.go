@@ -51,108 +51,108 @@ func runVersion(cmd *cobra.Command, args []string) {
 
 func testSingleProcess(showError bool) {
 	numOfWorkers := 1
-	viewer := NewHasherProgressViewer(numOfWorkers, true)
+	viewer := NewHasherProgressNotifier(numOfWorkers, true)
 
 	total := 3
-	viewer.Setup()
+	viewer.Start()
 	viewer.SetTotal(total)
 	sleep()
 
-	viewer.TaskStart(0, "task1")
+	viewer.NotifyTaskStart(0, "task1")
 	sleep()
-	viewer.TaskDone(0, "[OK]")
-	viewer.UpdateProgress(1, total)
+	viewer.NotifyTaskDone(0, "[OK]")
+	viewer.NotifyProgress(1, total)
 	sleep()
 
-	viewer.TaskStart(0, "task2")
+	viewer.NotifyTaskStart(0, "task2")
 	sleep()
 	if showError {
-		viewer.ShowError("error xxxx")
+		viewer.NotifyError(0, "error xxxx")
 		sleep()
-		viewer.ShowError("error yyyy")
+		viewer.NotifyError(0, "error yyyy")
 		sleep()
 	}
-	viewer.TaskDone(0, "[NG]")
-	viewer.UpdateProgress(2, total)
+	viewer.NotifyTaskDone(0, "[NG]")
+	viewer.NotifyProgress(2, total)
 	sleep()
 
-	viewer.TaskStart(0, "task3")
+	viewer.NotifyTaskStart(0, "task3")
 	sleep()
-	viewer.TaskDone(0, "[OK]")
-	viewer.UpdateProgress(3, total)
+	viewer.NotifyTaskDone(0, "[OK]")
+	viewer.NotifyProgress(3, total)
 	sleep()
 
-	viewer.TearDown()
+	viewer.Shutdown()
 }
 
 func testMultiProgress(showError bool) {
 	numOfWorkers := 3
-	viewer := NewHasherProgressViewer(numOfWorkers, true)
+	viewer := NewHasherProgressNotifier(numOfWorkers, true)
 
 	total := 6
 	done := 0
-	viewer.Setup()
+	viewer.Start()
 	viewer.SetTotal(total)
 	sleep()
 
-	viewer.TaskStart(0, "task1")
+	viewer.NotifyTaskStart(0, "task1")
 	sleep()
 
-	viewer.TaskStart(2, "task3")
+	viewer.NotifyTaskStart(2, "task3")
 	sleep()
 
-	viewer.TaskStart(1, "task2")
-	sleep()
-
-	done++
-	viewer.TaskDone(2, "[OK]")
-	viewer.UpdateProgress(done, total)
+	viewer.NotifyTaskStart(1, "task2")
 	sleep()
 
 	done++
-	viewer.TaskDone(0, "[OK]")
-	viewer.UpdateProgress(done, total)
+	viewer.NotifyTaskDone(2, "[OK]")
+	viewer.NotifyProgress(done, total)
 	sleep()
 
-	viewer.TaskStart(0, "task4")
+	done++
+	viewer.NotifyTaskDone(0, "[OK]")
+	viewer.NotifyProgress(done, total)
+	sleep()
+
+	viewer.NotifyTaskStart(0, "task4")
 	sleep()
 
 	if showError {
-		viewer.ShowError("task2 : error")
+		viewer.NotifyError(1, "task2 : error")
 		sleep()
 	}
 	done++
-	viewer.TaskDone(1, "[OK]")
-	viewer.UpdateProgress(done, total)
+	viewer.NotifyTaskDone(1, "[OK]")
+	viewer.NotifyProgress(done, total)
 	sleep()
 
-	viewer.TaskStart(1, "task5")
+	viewer.NotifyTaskStart(1, "task5")
 	sleep()
 
 	done++
-	viewer.TaskDone(1, "[OK]")
-	viewer.UpdateProgress(done, total)
+	viewer.NotifyTaskDone(1, "[OK]")
+	viewer.NotifyProgress(done, total)
 	sleep()
 
-	viewer.TaskStart(2, "task6")
+	viewer.NotifyTaskStart(2, "task6")
 	sleep()
 
 	if showError {
-		viewer.ShowError("task6 : error")
+		viewer.NotifyError(2, "task6 : error")
 		sleep()
 	}
 
 	done++
-	viewer.TaskDone(0, "[OK]")
-	viewer.UpdateProgress(done, total)
+	viewer.NotifyTaskDone(0, "[OK]")
+	viewer.NotifyProgress(done, total)
 	sleep()
 
 	done++
-	viewer.TaskDone(2, "[OK]")
-	viewer.UpdateProgress(done, total)
+	viewer.NotifyTaskDone(2, "[OK]")
+	viewer.NotifyProgress(done, total)
 	sleep()
 
-	viewer.TearDown()
+	viewer.Shutdown()
 }
 
 func sleep() {

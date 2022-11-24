@@ -91,8 +91,9 @@ func clearRecursively(dirPath string, verbose bool) error {
 		return err
 	}
 
-	var v core.ProgressWatcher = NewHasherProgressViewer(1, verbose)
-	v.Setup()
+	var n core.ProgressNotifier = NewHasherProgressNotifier(1, verbose)
+	n.SetTotal(totalCount)
+	n.Start()
 
 	count := 0
 
@@ -105,20 +106,20 @@ func clearRecursively(dirPath string, verbose bool) error {
 			return nil
 		}
 
-		v.TaskStart(0, path)
+		n.NotifyTaskStart(0, path)
 		resultMsg := Mark_OK
 		clearErr := clear(path)
 		if clearErr != nil {
 			msg := fmt.Sprintf("Failed to clear hash : %s", clearErr.Error())
-			v.ShowError(msg)
+			n.NotifyError(0, msg)
 			resultMsg = Mark_Failed
 		}
 		count++
-		v.TaskDone(0, resultMsg)
-		v.UpdateProgress(count, totalCount)
+		n.NotifyTaskDone(0, resultMsg)
+		n.NotifyProgress(count, totalCount)
 
 		return nil
 	})
-	v.TearDown()
+	n.Shutdown()
 	return err
 }
