@@ -68,6 +68,9 @@ func (p *HasherProgressViewer) showTaskMessage(workerId int) {
 	} else {
 		fmt.Print("\x1b[1G") // Move to top of current line
 	}
+
+	// TODO: delete
+	// time.Sleep(time.Millisecond * 500)
 }
 
 func (p *HasherProgressViewer) TaskStart(workerId int, path string) {

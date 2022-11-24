@@ -170,14 +170,13 @@ func NewUpdateResult(workerId int, task UpdateTask, hash string, message string,
 	}
 }
 
-func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceUpdate bool, watcher ProgressWatcher) error {
-	total, err := CountAllFiles(paths, watcher.IsVerbose())
+func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceUpdate bool, notifier ProgressNotifier2) error {
+	total, err := CountAllFiles(paths, notifier.IsVerbose())
 	if err != nil {
 		return err
 	}
 
-	watcher.SetTotal(total)
-	notifier := NewProgressNotifier(watcher)
+	notifier.SetTotal(total)
 	notifier.Start()
 
 	numOfWorkers = adjustNumOfWorkers(numOfWorkers, runtime.NumCPU())
@@ -264,7 +263,7 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 	inputDone <- numFiles
 }
 
-func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResult, alg *HashAlg, forceUpdate bool, notifier *ProgressNotifier) {
+func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResult, alg *HashAlg, forceUpdate bool, notifier ProgressNotifier2) {
 	for t := range tasks {
 		notifier.NotifyTaskStart(id, t.Path)
 		changed, hash, err := UpdateHash(t.Path, alg, forceUpdate)

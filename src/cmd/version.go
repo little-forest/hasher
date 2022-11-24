@@ -45,8 +45,8 @@ func runVersion(cmd *cobra.Command, args []string) {
 	fmt.Printf("hasher version %s %s built from %s on %s\n", version, osArch, revision, date)
 
 	// This is HasherProgressViewer's test code
-	// testSingleProcess(true)
-	// testMultiProgress(true)
+	testSingleProcess(true)
+	testMultiProgress(true)
 }
 
 func testSingleProcess(showError bool) {
@@ -60,7 +60,8 @@ func testSingleProcess(showError bool) {
 
 	viewer.TaskStart(0, "task1")
 	sleep()
-	viewer.TaskDone(0, 1, total, "[OK]")
+	viewer.TaskDone(0, "[OK]")
+	viewer.UpdateProgress(1, total)
 	sleep()
 
 	viewer.TaskStart(0, "task2")
@@ -71,12 +72,14 @@ func testSingleProcess(showError bool) {
 		viewer.ShowError("error yyyy")
 		sleep()
 	}
-	viewer.TaskDone(0, 2, total, "[NG]")
+	viewer.TaskDone(0, "[NG]")
+	viewer.UpdateProgress(2, total)
 	sleep()
 
 	viewer.TaskStart(0, "task3")
 	sleep()
-	viewer.TaskDone(0, 3, total, "[OK]")
+	viewer.TaskDone(0, "[OK]")
+	viewer.UpdateProgress(3, total)
 	sleep()
 
 	viewer.TearDown()
@@ -102,11 +105,13 @@ func testMultiProgress(showError bool) {
 	sleep()
 
 	done++
-	viewer.TaskDone(2, done, total, "[OK]")
+	viewer.TaskDone(2, "[OK]")
+	viewer.UpdateProgress(done, total)
 	sleep()
 
 	done++
-	viewer.TaskDone(0, done, total, "[OK]")
+	viewer.TaskDone(0, "[OK]")
+	viewer.UpdateProgress(done, total)
 	sleep()
 
 	viewer.TaskStart(0, "task4")
@@ -117,14 +122,16 @@ func testMultiProgress(showError bool) {
 		sleep()
 	}
 	done++
-	viewer.TaskDone(1, done, total, "[OK]")
+	viewer.TaskDone(1, "[OK]")
+	viewer.UpdateProgress(done, total)
 	sleep()
 
 	viewer.TaskStart(1, "task5")
 	sleep()
 
 	done++
-	viewer.TaskDone(1, done, total, "[OK]")
+	viewer.TaskDone(1, "[OK]")
+	viewer.UpdateProgress(done, total)
 	sleep()
 
 	viewer.TaskStart(2, "task6")
@@ -136,11 +143,13 @@ func testMultiProgress(showError bool) {
 	}
 
 	done++
-	viewer.TaskDone(0, done, total, "[OK]")
+	viewer.TaskDone(0, "[OK]")
+	viewer.UpdateProgress(done, total)
 	sleep()
 
 	done++
-	viewer.TaskDone(2, done, total, "[OK]")
+	viewer.TaskDone(2, "[OK]")
+	viewer.UpdateProgress(done, total)
 	sleep()
 
 	viewer.TearDown()
