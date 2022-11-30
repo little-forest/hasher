@@ -44,9 +44,9 @@ func init() {
 func runVersion(cmd *cobra.Command, args []string) {
 	fmt.Printf("hasher version %s %s built from %s on %s\n", version, osArch, revision, date)
 
-	// This is HasherProgressViewer's test code
-	testSingleProcess(true)
-	testMultiProgress(true)
+	// This is HasherProgressNotifier's test code
+	// testSingleProcess(true)
+	// testMultiProgress(true)
 }
 
 func testSingleProcess(showError bool) {
