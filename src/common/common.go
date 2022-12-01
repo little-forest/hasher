@@ -44,6 +44,9 @@ var C_orange = aec.EmptyBuilder.Color8BitF(214).ANSI
 var C_darkorange3 = aec.EmptyBuilder.Color8BitF(166).ANSI
 var C_lime = aec.EmptyBuilder.Color8BitF(10).ANSI
 
+var Mark_OK = fmt.Sprintf("[%s]", C_green.Apply("OK"))
+var Mark_Failed = fmt.Sprintf("[%s]", C_red.Apply("FAILED"))
+
 func OpenFile(path string) (*os.File, error) {
 	info, err := os.Stat(path)
 	if err != nil {

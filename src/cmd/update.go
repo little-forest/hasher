@@ -95,7 +95,7 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 
 func updateHashConcurrently(dirPaths []string, alg *core.HashAlg, forceUpdate bool, verbose bool) error {
 	numOfWorkers := 1
-	viewer := NewHasherProgressViewer(numOfWorkers, verbose)
+	notifier := NewHasherProgressNotifier(numOfWorkers, verbose)
 
 	paths := make([]string, 0)
 	for _, p := range dirPaths {
@@ -111,7 +111,7 @@ func updateHashConcurrently(dirPaths []string, alg *core.HashAlg, forceUpdate bo
 	}
 
 	if len(paths) > 0 {
-		err := core.ConcurrentUpdateHash(paths, alg, numOfWorkers, forceUpdate, viewer)
+		err := core.ConcurrentUpdateHash(paths, alg, numOfWorkers, forceUpdate, notifier)
 		return err
 	} else {
 		return nil

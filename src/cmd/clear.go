@@ -24,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	"github.com/little-forest/hasher/common"
 	. "github.com/little-forest/hasher/common"
 	"github.com/little-forest/hasher/core"
 )
@@ -73,10 +74,13 @@ func runClear(cmd *cobra.Command, args []string) (int, error) {
 }
 
 func clear(path string) error {
-	// TODO: deal symbolic link
 	file, err := OpenFile(path)
 	if err != nil {
 		return err
+	}
+	// skip symlink
+	if yes, _ := common.IsSymbolicLink(path); yes {
+		return nil
 	}
 	return core.ClearXattr(file)
 }
@@ -87,10 +91,11 @@ func clearRecursively(dirPath string, verbose bool) error {
 		return err
 	}
 
-	var v core.ProgressWatcher = NewHasherProgressViewer(1, verbose)
-	v.Setup()
+	var n core.ProgressNotifier = NewHasherProgressNotifier(1, verbose)
+	n.SetTotal(totalCount)
+	n.Start()
 
-	count := 1
+	count := 0
 
 	err = filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
@@ -101,16 +106,20 @@ func clearRecursively(dirPath string, verbose bool) error {
 			return nil
 		}
 
-		v.Progress(0, count, totalCount, path)
+		n.NotifyTaskStart(0, path)
+		resultMsg := Mark_OK
 		clearErr := clear(path)
 		if clearErr != nil {
 			msg := fmt.Sprintf("Failed to clear hash : %s", clearErr.Error())
-			v.ShowError(msg)
+			n.NotifyError(0, msg)
+			resultMsg = Mark_Failed
 		}
 		count++
+		n.NotifyTaskDone(0, resultMsg)
+		n.NotifyProgress(count, totalCount)
 
 		return nil
 	})
-	v.TearDown()
+	n.Shutdown()
 	return err
 }

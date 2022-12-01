@@ -78,8 +78,8 @@ func listHashAll(dirPaths []string, alg *core.HashAlg, outPath string, noCheck b
 		writer = os.Stdout
 	}
 
-	watcher := NewHasherProgressViewer(1, verbose)
+	notifier := NewHasherProgressNotifier(1, verbose)
 
-	err := core.ListHash(dirPaths, core.NewDefaultHashAlg(), writer, watcher, verbose, noCheck)
+	err := core.ListHash(dirPaths, core.NewDefaultHashAlg(), writer, notifier, verbose, noCheck)
 	return err
 }

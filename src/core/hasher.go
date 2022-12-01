@@ -156,24 +156,28 @@ type UpdateResult struct {
 	WorkerId int
 	Task     UpdateTask
 	Hash     string
+	Message  string
 	Err      error
 }
 
-func NewUpdateResult(workerId int, task UpdateTask, hash string, err error) UpdateResult {
+func NewUpdateResult(workerId int, task UpdateTask, hash string, message string, err error) UpdateResult {
 	return UpdateResult{
 		WorkerId: workerId,
 		Task:     task,
 		Hash:     hash,
+		Message:  message,
 		Err:      err,
 	}
 }
 
-func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceUpdate bool, watcher ProgressWatcher) error {
-	total, err := CountAllFiles(paths, watcher.IsVerbose())
+func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceUpdate bool, notifier ProgressNotifier) error {
+	total, err := CountAllFiles(paths, notifier.IsVerbose())
 	if err != nil {
 		return err
 	}
-	watcher.SetTotal(total)
+
+	notifier.SetTotal(total)
+	notifier.Start()
 
 	numOfWorkers = adjustNumOfWorkers(numOfWorkers, runtime.NumCPU())
 
@@ -182,10 +186,8 @@ func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceU
 
 	// run workers
 	for i := 0; i < numOfWorkers; i++ {
-		go updateHashWorker(i, tasks, results, alg, forceUpdate)
+		go updateHashWorker(i, tasks, results, alg, forceUpdate, notifier)
 	}
-
-	watcher.Setup()
 
 	// collect target files
 	inputDone := make(chan int)
@@ -196,12 +198,9 @@ func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceU
 	done := 0
 	for {
 		select {
-		case r := <-results:
+		case <-results:
 			done++
-			if r.Err != nil {
-				watcher.ShowError(r.Err.Error())
-			}
-			watcher.Progress(r.WorkerId, done, remains, r.Task.Path)
+			notifier.NotifyProgress(done, remains)
 		case taskNum := <-inputDone:
 			remains = taskNum
 		}
@@ -210,7 +209,7 @@ func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceU
 		}
 	}
 
-	watcher.TearDown()
+	notifier.Shutdown()
 
 	return nil
 }
@@ -264,14 +263,25 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 	inputDone <- numFiles
 }
 
-func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResult, alg *HashAlg, forceUpdate bool) {
+func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResult, alg *HashAlg, forceUpdate bool, notifier ProgressNotifier) {
 	for t := range tasks {
-		_, hash, err := UpdateHash(t.Path, alg, forceUpdate)
+		notifier.NotifyTaskStart(id, t.Path)
+		changed, hash, err := UpdateHash(t.Path, alg, forceUpdate)
 		hashValue := ""
+		msg := ""
 		if err == nil {
 			hashValue = hash.String()
+			if !changed {
+				msg = Mark_OK
+			} else {
+				msg = "[UPDATED]"
+			}
+		} else {
+			msg = Mark_Failed
+			notifier.NotifyError(id, err.Error())
 		}
-		results <- NewUpdateResult(id, t, hashValue, err)
+		notifier.NotifyTaskDone(id, msg)
+		results <- NewUpdateResult(id, t, hashValue, msg, err)
 	}
 }
 
@@ -288,14 +298,14 @@ func adjustNumOfWorkers(numOfWorkers int, numOfCPU int) int {
 	return numOfWorkers
 }
 
-func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatcher, verbose bool, noCheck bool) error {
+func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifier, verbose bool, noCheck bool) error {
 	total, err := CountAllFiles(dirPaths, watcher.IsVerbose())
 	if err != nil {
 		return err
 	}
 
 	watcher.SetTotal(total)
-	watcher.Setup()
+	watcher.Start()
 
 	bw := bufio.NewWriterSize(w, 16384)
 	// nolint:errcheck
@@ -313,13 +323,15 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatc
 			}
 
 			if verbose {
-				watcher.Progress(0, count, total, path)
+				watcher.NotifyTaskStart(0, path)
 			}
 
 			var hash *Hash
+			var changed bool
+			msg := ""
 			absPath, _ := filepath.Abs(path)
 			if !noCheck {
-				_, hash, e = UpdateHash(absPath, alg, false)
+				changed, hash, e = UpdateHash(absPath, alg, false)
 			} else {
 				hash, e = GetHash(absPath, alg)
 			}
@@ -333,6 +345,15 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatc
 				}
 			}
 			count++
+			if verbose {
+				if !changed {
+					msg = "[OK]"
+				} else {
+					msg = "[UPDATED]"
+				}
+				watcher.NotifyTaskDone(0, msg)
+				watcher.NotifyProgress(count, total)
+			}
 			return nil
 		})
 		if err != nil {
@@ -340,7 +361,7 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressWatc
 		}
 	}
 
-	watcher.TearDown()
+	watcher.Shutdown()
 
 	return err
 }
