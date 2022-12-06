@@ -47,6 +47,18 @@ var C_lime = aec.EmptyBuilder.Color8BitF(10).ANSI
 var Mark_OK = fmt.Sprintf("[%s]", C_green.Apply("OK"))
 var Mark_Failed = fmt.Sprintf("[%s]", C_red.Apply("FAILED"))
 
+func ShowWarn(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "["+C_yellow.Apply("WARNING")+"  "+format+"\n", args...)
+}
+
+func ShowError(err error) {
+	fmt.Fprintln(os.Stderr, "["+C_red.Apply("ERROR")+"] "+err.Error())
+}
+
+func ShowErrorMsg(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "["+C_red.Apply("ERROR")+"] "+format+"\n", args...)
+}
+
 func OpenFile(path string) (*os.File, error) {
 	info, err := os.Stat(path)
 	if err != nil {
