@@ -48,7 +48,7 @@ var Mark_OK = fmt.Sprintf("[%s]", C_green.Apply("OK"))
 var Mark_Failed = fmt.Sprintf("[%s]", C_red.Apply("FAILED"))
 
 func ShowWarn(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, "["+C_yellow.Apply("WARNING")+"  "+format+"\n", args...)
+	fmt.Fprintf(os.Stderr, "["+C_yellow.Apply("WARNING")+"] "+format+"\n", args...)
 }
 
 func ShowError(err error) {
