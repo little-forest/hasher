@@ -18,7 +18,6 @@ package cmd
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -48,16 +47,20 @@ func runClear(cmd *cobra.Command, args []string) (int, error) {
 	status := 0
 	var errResult error
 	for _, p := range args {
-		isDir, err := IsDirectory(p)
+		ftype, err := CheckFileType(p)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			ShowError(err)
 			continue
 		}
 
-		if isDir {
+		if ftype == SymbolicLink {
+			// skip symlink
+			continue
+		}
+
+		if ftype == Directory {
 			if !recuesive {
 				// skip dir
-				fmt.Fprintf(os.Stderr, "Skip directory : %s\n", p)
 				continue
 			}
 			err = clearRecursively(p, verbose)
@@ -65,7 +68,7 @@ func runClear(cmd *cobra.Command, args []string) (int, error) {
 			err = clear(p)
 		}
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			ShowError(err)
 			status = 1
 			errResult = err
 		}
