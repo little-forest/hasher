@@ -160,8 +160,11 @@ func NewDirDiff(dirPath string, alg *HashAlg) (*DirDiff, error) {
 
 	for _, fileInfo := range fileInfos {
 		if !fileInfo.IsDir() {
-			// TODO: symbolic link check
 			filePath := filepath.Join(dirPath, fileInfo.Name())
+			if fileInfo.Type() == fs.ModeSymlink {
+				common.ShowWarn("Skip symbolic link %s", filePath)
+				continue
+			}
 			f, err := NewFileDiff(filePath, alg)
 			if err != nil {
 				common.ShowWarn("Failed to calc hash %s", err.Error())
