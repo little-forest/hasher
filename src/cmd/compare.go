@@ -56,12 +56,13 @@ Return true if given two failes have same hash value.
 */
 func compare(path1 string, path2 string) (bool, error) {
 	hashAlg := core.NewDefaultHashAlg()
-	_, hash1, err := core.UpdateHash(path1, hashAlg, false)
+
+	_, hash1, err := core.UpdateHashStrictly(path1, hashAlg, false)
 	if err != nil {
 		return false, err
 	}
 
-	_, hash2, err := core.UpdateHash(path2, hashAlg, false)
+	_, hash2, err := core.UpdateHashStrictly(path2, hashAlg, false)
 	if err != nil {
 		return false, err
 	}

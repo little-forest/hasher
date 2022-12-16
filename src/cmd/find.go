@@ -123,7 +123,7 @@ type findSameHashWalker struct {
 func (w findSameHashWalker) Deal(f *os.File) error {
 	_, hash, err := core.UpdateHash(f.Name(), w.Alg, false)
 	if err != nil {
-		return err
+		ShowWarn("failed to update hash : %s", err.Error())
 	}
 	if hash != nil && w.Source.HasSameHashValue(hash) {
 		fmt.Println(hash.Tsv())

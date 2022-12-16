@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 
+	. "github.com/little-forest/hasher/common"
 	"github.com/little-forest/hasher/core"
 	"github.com/spf13/cobra"
 )
@@ -44,13 +45,22 @@ func init() {
 
 func runCalcHash(cmd *cobra.Command, args []string) (int, error) {
 	for _, v := range args {
+		if isDir, _ := IsDirectory(v); isDir {
+			// skip directory
+			continue
+		}
+		if isSymLink, _ := IsSymbolicLink(v); isSymLink {
+			// skip symlink
+			continue
+		}
+
 		hash, err := core.CalcHash(v, core.NewDefaultHashAlg())
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			ShowError(err)
 			continue
 		}
 		if f, _ := cmd.Flags().GetBool(Flag_Calc_NoShowPath); !f {
-			fmt.Fprintf(os.Stdout, "%s  %s\n", hash, v)
+			fmt.Fprintf(os.Stdout, "%s\t%s\n", hash, v)
 		} else {
 			fmt.Fprintf(os.Stdout, "%s\n", hash)
 		}

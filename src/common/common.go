@@ -47,35 +47,73 @@ var C_lime = aec.EmptyBuilder.Color8BitF(10).ANSI
 var Mark_OK = fmt.Sprintf("[%s]", C_green.Apply("OK"))
 var Mark_Failed = fmt.Sprintf("[%s]", C_red.Apply("FAILED"))
 
-func OpenFile(path string) (*os.File, error) {
+func ShowWarn(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "["+C_yellow.Apply("WARNING")+"] "+format+"\n", args...)
+}
+
+func ShowError(err error) {
+	fmt.Fprintln(os.Stderr, "["+C_red.Apply("ERROR")+"] "+err.Error())
+}
+
+func ShowErrorMsg(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "["+C_red.Apply("ERROR")+"] "+format+"\n", args...)
+}
+
+type FileType int
+
+const (
+	Unknown FileType = iota + 1
+	RegularFile
+	Directory
+	SymbolicLink
+)
+
+func CheckFileType(path string) (FileType, error) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return nil, fmt.Errorf("can't stat file : %s", path)
+		return Unknown, err
 	}
-
+	if info.Mode()&os.ModeSymlink == os.ModeSymlink {
+		return SymbolicLink, nil
+	}
 	if info.Mode().IsDir() {
-		return nil, fmt.Errorf("directory can't open : %s", path)
+		return Directory, nil
+	}
+	if info.Mode().IsRegular() {
+		return RegularFile, nil
+	}
+	return Unknown, fmt.Errorf("non regular file : %s", path)
+}
+
+func OpenFile(path string) (*os.File, error) {
+	ftype, err := CheckFileType(path)
+	if err != nil {
+		return nil, err
 	}
 
-	if !info.Mode().IsRegular() {
+	switch ftype {
+	case RegularFile:
+		file, err := os.Open(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open file. : %s", err.Error())
+		}
+		return file, nil
+	case Directory:
+		return nil, fmt.Errorf("directory can't open : %s", path)
+	case SymbolicLink:
+		return nil, fmt.Errorf("symbolic link can't open : %s", path)
+	default:
 		return nil, fmt.Errorf("non regular file : %s", path)
 	}
-
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file. : %s", err.Error())
-	}
-	return file, nil
 }
 
 func IsDirectory(path string) (bool, error) {
-	info, err := os.Stat(path)
-
+	ftype, err := CheckFileType(path)
 	if err != nil {
-		return false, fmt.Errorf("can't stat file : %s (%s)", path, err)
+		return false, err
 	}
 
-	return info.Mode().IsDir(), nil
+	return ftype == Directory, nil
 }
 
 func EnsureDirectory(path string) error {
@@ -84,31 +122,32 @@ func EnsureDirectory(path string) error {
 		return err
 	}
 	if !isDir {
-		return fmt.Errorf("Not a directory : %s", path)
+		return fmt.Errorf("not a directory : %s", path)
 	}
 	return nil
 }
 
 func EnsureRegularFile(path string) error {
-	info, err := os.Stat(path)
+	ftype, err := CheckFileType(path)
 	if err != nil {
 		return err
 	}
-	if info.Mode().IsDir() {
+	if ftype == Directory {
 		return fmt.Errorf("directory : %s", path)
 	}
-	if info.Mode()&os.ModeSymlink == os.ModeSymlink {
+	if ftype == SymbolicLink {
 		return fmt.Errorf("symboliclink : %s", path)
 	}
 	return nil
 }
 
 func IsSymbolicLink(path string) (bool, error) {
-	info, err := os.Lstat(path)
+	ftype, err := CheckFileType(path)
 	if err != nil {
 		return false, err
 	}
-	return info.Mode()&os.ModeSymlink == os.ModeSymlink, nil
+
+	return ftype == SymbolicLink, nil
 }
 
 func CleanPath(path string) (string, error) {

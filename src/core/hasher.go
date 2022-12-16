@@ -28,12 +28,33 @@ const Xattr_modifiedTime = Xattr_prefix + ".mtime"
 // Time of hash update
 const Xattr_hashCheckedTime = Xattr_prefix + ".htime"
 
-// Update specified file's hash value
+// UodateHashStictly updates specified file's hash value.
+// If the update of an attribute fails, a warning is displayed instead of returning an error.
 //
 //	changed : bool
 //	hash value : *Hash
 //	error : error
 func UpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, *Hash, error) {
+	changed, hash, err := UpdateHashStrictly(path, alg, forceUpdate)
+	if err != nil {
+		if errors.As(err, Err_updateError) {
+			// Show warning and ignore error
+			ShowWarn("Failed to update attribute : %s", err.Error())
+			return changed, hash, nil
+		} else {
+			return false, nil, err
+		}
+	}
+	return changed, hash, err
+}
+
+// UodateHashStictly updates specified file's hash value.
+// Returns an UpdateError if the update of an attribute fails.
+//
+//	changed : bool
+//	hash value : *Hash
+//	error : error
+func UpdateHashStrictly(path string, alg *HashAlg, forceUpdate bool) (bool, *Hash, error) {
 	file, err := OpenFile(path)
 	if err != nil {
 		return false, nil, err
@@ -61,6 +82,9 @@ func UpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, *Hash, error
 		if !forceUpdate && !changed {
 			// update only checked time
 			err := updateHashCheckedTime(file)
+			if err != nil {
+				err = NewUpdateError(err)
+			}
 			hash, _ := NewHashFromString(path, alg, curHash, info.ModTime().Unix())
 			return false, hash, err
 		}
@@ -74,16 +98,16 @@ func UpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, *Hash, error
 
 	// update attributes
 	if err := SetXattr(file, alg.AttrName, hash.String()); err != nil {
-		return true, hash, err
+		return true, hash, NewUpdateError(err)
 	}
 	if err := updateHashCheckedTime(file); err != nil {
-		return true, hash, err
+		return true, hash, NewUpdateError(err)
 	}
 	if err := SetXattr(file, Xattr_size, size); err != nil {
-		return true, hash, err
+		return true, hash, NewUpdateError(err)
 	}
 	if err := SetXattr(file, Xattr_modifiedTime, modTime); err != nil {
-		return true, hash, err
+		return true, hash, NewUpdateError(err)
 	}
 
 	return true, hash, nil
