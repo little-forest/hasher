@@ -84,7 +84,7 @@ func (n *HasherProgressNotifier) Start() {
 func (n *HasherProgressNotifier) Shutdown() {
 	close(n.notifyQueue)
 
-	for true {
+	for {
 		if n.isClosed {
 			break
 		}
