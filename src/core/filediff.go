@@ -30,7 +30,7 @@ type FileDiff struct {
 
 func NewFileDiff(filePath string, alg *HashAlg) (*FileDiff, error) {
 	_, hash, err := UpdateHash(filePath, alg, false)
-	if err != nil {
+	if err != nil && hash == nil {
 		return nil, err
 	}
 

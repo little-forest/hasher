@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/little-forest/hasher/common"
 	"github.com/pkg/errors"
 )
 
@@ -163,7 +164,8 @@ func NewDirDiff(dirPath string, alg *HashAlg) (*DirDiff, error) {
 			filePath := filepath.Join(dirPath, fileInfo.Name())
 			f, err := NewFileDiff(filePath, alg)
 			if err != nil {
-				return nil, err
+				common.ShowWarn("Failed to calc hash %s", err.Error())
+				continue
 			}
 			f.Parent = dirDiff
 			dirDiff.add(f)
@@ -218,8 +220,14 @@ func DirDiffRecursively(baseDir string, targetDir string) ([]*DirPair, error) {
 
 	// check intersect directories
 	for p := range baseDirList.Intersect(targetDirList).Iterator().C {
-		baseDirDiff, _ := NewDirDiff(filepath.Join(baseDir, p), alg)
-		targetDirDiff, _ := NewDirDiff(filepath.Join(targetDir, p), alg)
+		baseDirDiff, err := NewDirDiff(filepath.Join(baseDir, p), alg)
+		if err != nil {
+			return nil, err
+		}
+		targetDirDiff, err := NewDirDiff(filepath.Join(targetDir, p), alg)
+		if err != nil {
+			return nil, err
+		}
 
 		baseDirDiff.Compare(targetDirDiff)
 		dirPairs = append(dirPairs, NewDirPair(baseDirDiff, targetDirDiff))

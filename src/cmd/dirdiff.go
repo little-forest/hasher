@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/little-forest/hasher/common"
 	. "github.com/little-forest/hasher/common"
 	"github.com/little-forest/hasher/core"
 	"github.com/morikuni/aec"
@@ -72,6 +73,10 @@ func runDirDiff(cmd *cobra.Command, args []string) (int, error) {
 func dirDiff(basePath string, targetPath string, showOnlyDiff bool, verbose bool) (int, error) {
 	// diff
 	dirPairs, err := core.DirDiffRecursively(basePath, targetPath)
+	if err != nil {
+		common.ShowErrorMsg("dirdiff failed : %s", err.Error())
+		return 1, nil
+	}
 
 	// display
 	for _, pair := range dirPairs {
