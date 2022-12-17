@@ -2,8 +2,12 @@
 
 # Install
 
-```
-curl -Lo - https://github.com/little-forest/hasher/releases/download/v0.0.7/hasher_linux_x86_64.tar.gz | tar zxvf -
+```bash
+HASHER_VERSION=v0.0.8
+INSTALL_DIR=~/bin
+
+curl -sLo - https://github.com/little-forest/hasher/releases/download/${HASHER_VERSION}/hasher_linux_x86_64.tar.gz \
+  | tar -C ${INSTALL_DIR} -zxv
 ```
 
 # For developers
