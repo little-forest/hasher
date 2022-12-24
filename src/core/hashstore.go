@@ -71,12 +71,10 @@ func (s HashStore) Values() []*Hash {
 	return values
 }
 
-func LoadHashData(path string) (*HashStore, error) {
-	store := NewHashStore()
-
+func (s *HashStore) LoadHashData(path string) error {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	// nolint:errcheck
 	defer f.Close()
@@ -95,18 +93,18 @@ func LoadHashData(path string) (*HashStore, error) {
 			continue
 		}
 
-		hash, err := parseHashLine(line)
+		hash, err := s.parseHashLine(line)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 		}
 
-		store.Put(hash)
+		s.Put(hash)
 	}
 
-	return store, nil
+	return nil
 }
 
-func parseHashLine(line []string) (*Hash, error) {
+func (s HashStore) parseHashLine(line []string) (*Hash, error) {
 	if len(line) < 4 {
 		return nil, fmt.Errorf("Invalid format : %v", line)
 	}
@@ -129,9 +127,7 @@ func parseHashLine(line []string) (*Hash, error) {
 	return hash, nil
 }
 
-func MakeHashDataFromDirectory(dirPath string, alg *HashAlg, verbose bool) (*HashStore, error) {
-	store := NewHashStore()
-
+func (s *HashStore) AppendHashDataFromDirectory(dirPath string, alg *HashAlg, verbose bool) error {
 	err := filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, e error) error {
 		if e != nil {
 			return errors.Wrap(e, "failed to filepath.Walk")
@@ -151,9 +147,9 @@ func MakeHashDataFromDirectory(dirPath string, alg *HashAlg, verbose bool) (*Has
 		if e != nil {
 			fmt.Fprintf(os.Stderr, "Failed to update hash : %s (reason : %s)\n", absPath, e.Error())
 		} else {
-			store.Put(hash)
+			s.Put(hash)
 		}
 		return nil
 	})
-	return store, err
+	return err
 }

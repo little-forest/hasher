@@ -28,7 +28,7 @@ const Xattr_modifiedTime = Xattr_prefix + ".mtime"
 // Time of hash update
 const Xattr_hashCheckedTime = Xattr_prefix + ".htime"
 
-// UodateHashStictly updates specified file's hash value.
+// UpdateHashStictly updates specified file's hash value.
 // If the update of an attribute fails, a warning is displayed instead of returning an error.
 //
 //	changed : bool
@@ -48,7 +48,7 @@ func UpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, *Hash, error
 	return changed, hash, err
 }
 
-// UodateHashStictly updates specified file's hash value.
+// UpdateHashStictly updates specified file's hash value.
 // Returns an UpdateError if the update of an attribute fails.
 //
 //	changed : bool
