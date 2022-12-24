@@ -30,9 +30,20 @@ const Flag_Duplication_ShowMissingOnly = "missing-only"
 const Flag_Duplication_PrintSourcePathOnly = "print-source-path-only"
 const Flag_Duplication_PrintZero = "print0"
 
-const SHOW_ALWAYS = 0
-const SHOW_EXISTS_ONLY = 1
-const SHOW_MISSING_ONLY = 2
+const (
+	SHOW_ALWAYS       = iota + 1
+	SHOW_EXISTS_ONLY  = 1
+	SHOW_MISSING_ONLY = 2
+)
+
+type checkDuplicationOption struct {
+	HashAlg             *core.HashAlg
+	PrintSourcePathOnly bool
+	PrintZero           bool
+	ShowMode            int
+	Source              []string
+	Target              []string
+}
 
 // checkDuplicationCmd represents the compare command
 var checkDuplicationCmd = &cobra.Command{
@@ -40,6 +51,15 @@ var checkDuplicationCmd = &cobra.Command{
 	Short: "Check duplicated files",
 	Long:  ``,
 	RunE:  statusWrapper.RunE(runCheckDuplicated),
+	Args: func(cmd *cobra.Command, args []string) error {
+		showExistsOnly, _ := cmd.Flags().GetBool(Flag_Duplication_ShowExistsOnly)
+		showMissingOnly, _ := cmd.Flags().GetBool(Flag_Duplication_ShowMissingOnly)
+
+		if showExistsOnly && showMissingOnly {
+			return fmt.Errorf("can't specify both -e and -m option")
+		}
+		return nil
+	},
 }
 
 func init() {
@@ -53,42 +73,57 @@ func init() {
 	checkDuplicationCmd.Flags().BoolP(Flag_Duplication_PrintZero, "0", false, "separate by null character")
 }
 
-func runCheckDuplicated(cmd *cobra.Command, args []string) (int, error) {
-	source, _ := cmd.Flags().GetString(Flag_Duplication_Source)
-	target, _ := cmd.Flags().GetString(Flag_Duplication_Target)
-
-	printSourcePathOnly, _ := cmd.Flags().GetBool(Flag_Duplication_PrintSourcePathOnly)
-	printZero, _ := cmd.Flags().GetBool(Flag_Duplication_PrintZero)
-
+func newCkeckDuplicationOption(cmd *cobra.Command, args []string) checkDuplicationOption {
 	showExistsOnly, _ := cmd.Flags().GetBool(Flag_Duplication_ShowExistsOnly)
 	showMissingOnly, _ := cmd.Flags().GetBool(Flag_Duplication_ShowMissingOnly)
 
-	// check options
-	if showExistsOnly && showMissingOnly {
-		return 1, fmt.Errorf("Can't specify both -e and -m")
-	}
 	showMode := SHOW_ALWAYS
 	if showExistsOnly {
 		showMode = SHOW_EXISTS_ONLY
 	} else if showMissingOnly {
 		showMode = SHOW_MISSING_ONLY
 	}
-	opt := CheckDuplicationOption{
+
+	printSourcePathOnly, _ := cmd.Flags().GetBool(Flag_Duplication_PrintSourcePathOnly)
+	printZero, _ := cmd.Flags().GetBool(Flag_Duplication_PrintZero)
+
+	opt := checkDuplicationOption{
+		HashAlg:             core.NewDefaultHashAlg(),
 		PrintSourcePathOnly: printSourcePathOnly,
 		PrintZero:           printZero,
 		ShowMode:            showMode,
 	}
 
-	alg := core.NewDefaultHashAlg()
+	// set target and source
+	optSource, _ := cmd.Flags().GetString(Flag_Duplication_Source)
+	optTarget, _ := cmd.Flags().GetString(Flag_Duplication_Target)
+
+	if optSource != "" {
+		// multiple target
+		opt.Source = []string{optSource}
+		opt.Target = make([]string, len(args))
+		copy(opt.Target, args)
+	} else {
+		// multiple source
+		opt.Target = []string{optTarget}
+		opt.Source = make([]string, len(args))
+		copy(opt.Source, args)
+	}
+
+	return opt
+}
+
+func runCheckDuplicated(cmd *cobra.Command, args []string) (int, error) {
+	opt := newCkeckDuplicationOption(cmd, args)
 
 	// make source hash store
-	srcHashData, err := loadHashData(source, alg)
+	srcHashData, err := loadHashData(opt.Source, opt.HashAlg)
 	if err != nil {
 		return 1, err
 	}
 
 	// make target hash store
-	targetHashData, err := loadHashData(target, alg)
+	targetHashData, err := loadHashData(opt.Target, opt.HashAlg)
 	if err != nil {
 		return 1, err
 	}
@@ -97,33 +132,30 @@ func runCheckDuplicated(cmd *cobra.Command, args []string) (int, error) {
 	return result, err
 }
 
-func loadHashData(srcPath string, alg *core.HashAlg) (*core.HashStore, error) {
-	var store *core.HashStore
-	isDir, err := IsDirectory(srcPath)
-	if err != nil {
-		return nil, err
-	}
-	if isDir {
-		store, err = core.MakeHashDataFromDirectory(srcPath, alg, false)
+func loadHashData(srcPaths []string, alg *core.HashAlg) (*core.HashStore, error) {
+	store := core.NewHashStore()
+	for _, p := range srcPaths {
+		isDir, err := IsDirectory(p)
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		store, err = core.LoadHashData(srcPath)
-		if err != nil {
-			return nil, err
+
+		if isDir {
+			err = store.AppendHashDataFromDirectory(p, alg, false)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			err = store.LoadHashData(p)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
-	return store, err
+	return store, nil
 }
 
-type CheckDuplicationOption struct {
-	PrintSourcePathOnly bool
-	PrintZero           bool
-	ShowMode            int
-}
-
-func doCheckDuplication(src *core.HashStore, target *core.HashStore, opt CheckDuplicationOption) (int, error) {
+func doCheckDuplication(src *core.HashStore, target *core.HashStore, opt checkDuplicationOption) (int, error) {
 	sep := "\n"
 	if opt.PrintZero {
 		sep = "\x00"
