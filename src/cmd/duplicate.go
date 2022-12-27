@@ -49,8 +49,16 @@ type checkDuplicationOption struct {
 var checkDuplicationCmd = &cobra.Command{
 	Use:   "duplicate -s (HASH_LIST_TSV|SOURCE_DIR) -t (HASH_LIST_TSV|TARGET_DIR)",
 	Short: "Check duplicated files",
-	Long:  ``,
-	RunE:  statusWrapper.RunE(runCheckDuplicated),
+	Example: `
+  (1) Find each file in SOURCE_DIR exists in TARGET_DIRs...
+        hasher duplicate -s SOURCE_DIR TARGET_DIR...
+
+  (2) Find each file in SOURCE_DIRs exists in TARGET_DIR
+        hasher duplicate -t TARGET_DIR SOURCE_DIRs
+
+  Instead of directories, you can also specify a TSV file output by the list-hash sub-command.
+`,
+	RunE: statusWrapper.RunE(runCheckDuplicated),
 	Args: func(cmd *cobra.Command, args []string) error {
 		showExistsOnly, _ := cmd.Flags().GetBool(Flag_Duplication_ShowExistsOnly)
 		showMissingOnly, _ := cmd.Flags().GetBool(Flag_Duplication_ShowMissingOnly)
