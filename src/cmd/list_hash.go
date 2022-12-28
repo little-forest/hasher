@@ -25,12 +25,12 @@ import (
 )
 
 const Flag_ListHash_Out = "out"
-const Flag_ListHash_NoCheck = "no-check"
+const Flag_ListHash_UpdateHash = "update-hash"
 
 // listHashCmd represents the listHash command
 var listHashCmd = &cobra.Command{
-	Use:   "list-hash [-o OUT_FILE] TARGET_DIR...",
-	Short: "output hash list in json format",
+	Use:   "list-hash [-u] [-o OUT_FILE] TARGET...",
+	Short: "Output hash list in TSV format",
 	Long:  ``,
 	RunE:  statusWrapper.RunE(runListHash),
 }
@@ -39,15 +39,15 @@ func init() {
 	rootCmd.AddCommand(listHashCmd)
 
 	listHashCmd.Flags().StringP(Flag_ListHash_Out, "o", "", "output file path")
-	listHashCmd.Flags().BoolP(Flag_ListHash_NoCheck, "n", false, "Do not check if the hash is up-to-date. This may result in fast processing but incorrect results.")
+	listHashCmd.Flags().BoolP(Flag_ListHash_UpdateHash, "u", false, "When the hash is NOT up-to-date. Update it.")
 }
 
 func runListHash(cmd *cobra.Command, args []string) (int, error) {
 	out, _ := cmd.Flags().GetString(Flag_ListHash_Out)
-	noCheck, _ := cmd.Flags().GetBool(Flag_ListHash_NoCheck)
+	updateHash, _ := cmd.Flags().GetBool(Flag_ListHash_UpdateHash)
 	alg := core.NewDefaultHashAlg()
 
-	err := listHashAll(args, alg, out, noCheck)
+	err := listHashAll(args, alg, out, updateHash)
 	if err != nil {
 		return 1, err
 	} else {
@@ -55,7 +55,7 @@ func runListHash(cmd *cobra.Command, args []string) (int, error) {
 	}
 }
 
-func listHashAll(dirPaths []string, alg *core.HashAlg, outPath string, noCheck bool) error {
+func listHashAll(dirPaths []string, alg *core.HashAlg, outPath string, updateHash bool) error {
 	// check directory
 	for _, p := range dirPaths {
 		if err := EnsureDirectory(p); err != nil {
@@ -80,6 +80,7 @@ func listHashAll(dirPaths []string, alg *core.HashAlg, outPath string, noCheck b
 
 	notifier := NewHasherProgressNotifier(1, verbose)
 
-	err := core.ListHash(dirPaths, core.NewDefaultHashAlg(), writer, notifier, verbose, noCheck)
+	// err := core.ListHash(dirPaths, core.NewDefaultHashAlg(), writer, notifier, verbose, noCheck)
+	err := core.ListHash2(dirPaths, core.NewDefaultHashAlg(), writer, notifier, verbose, updateHash)
 	return err
 }

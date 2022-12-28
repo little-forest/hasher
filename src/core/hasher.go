@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/little-forest/hasher/common"
 	. "github.com/little-forest/hasher/common"
 	"github.com/pkg/errors"
 )
@@ -388,4 +389,62 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressNoti
 	watcher.Shutdown()
 
 	return err
+}
+
+func ListHash2(paths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifier, verbose bool, updateHash bool) error {
+	bw := bufio.NewWriterSize(w, 16384)
+	// nolint:errcheck
+	defer bw.Flush()
+
+	for _, p := range paths {
+		t, err := CheckFileType(p)
+		if err != nil {
+			ShowErrorMsg("Failed to stat : %s", err.Error())
+			continue
+		}
+
+		switch t {
+		case RegularFile:
+			listSingleFileHash(p, bw, updateHash, alg)
+		case Directory:
+			common.WalkDir(p, func(f *os.File) error {
+				listSingleFileHash(f.Name(), bw, updateHash, alg)
+				return nil
+			})
+		default:
+			ShowWarn("Unsupported file type : %s", p)
+		}
+	}
+
+	return nil
+}
+
+// listSingleFileHash shows given file's hash value.
+// path is representing a regular file path,
+// When update specified true, if the hash has not been computed,
+// calculate it and return true if it has been updated.
+func listSingleFileHash(path string, writer *bufio.Writer, update bool, alg *HashAlg) bool {
+	var hash *Hash
+	var changed bool
+	var e error
+	absPath, _ := filepath.Abs(path)
+	if update {
+		changed, hash, e = UpdateHashStrictly(absPath, alg, false)
+		if e != nil {
+			ShowErrorMsg("Failed to update hash : %s", e.Error())
+			return false
+		}
+	} else {
+		hash, e = GetHash(absPath, alg)
+		if e != nil {
+			ShowErrorMsg("Failed to get hash : %s", e.Error())
+			return false
+		}
+		if hash == nil {
+			ShowWarn("The hash value has not yet been calculated. : %s", absPath)
+			return false
+		}
+	}
+	fmt.Fprintf(writer, "%s\n", hash.Tsv())
+	return changed
 }
