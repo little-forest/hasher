@@ -57,6 +57,7 @@ var checkDuplicationCmd = &cobra.Command{
         hasher duplicate -t TARGET_DIR SOURCE_DIRs
 
   Instead of directories, you can also specify a TSV file output by the list-hash sub-command.
+  Cannot use -s and -t options at the same time.
 `,
 	RunE: statusWrapper.RunE(runCheckDuplicated),
 	Args: func(cmd *cobra.Command, args []string) error {
@@ -66,6 +67,12 @@ var checkDuplicationCmd = &cobra.Command{
 		if showExistsOnly && showMissingOnly {
 			return fmt.Errorf("can't specify both -e and -m option")
 		}
+
+		source, _ := cmd.Flags().GetString(Flag_Duplication_Source)
+		target, _ := cmd.Flags().GetString(Flag_Duplication_Target)
+		if source != "" && target != "" {
+			return fmt.Errorf("can't specify both -s and -t option")
+		}
 		return nil
 	},
 }
@@ -73,8 +80,8 @@ var checkDuplicationCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(checkDuplicationCmd)
 
-	checkDuplicationCmd.Flags().StringP(Flag_Duplication_Source, "s", "", "source hash file")
-	checkDuplicationCmd.Flags().StringP(Flag_Duplication_Target, "t", "", "target hash file")
+	checkDuplicationCmd.Flags().StringP(Flag_Duplication_Source, "s", "", "source hash file or directory")
+	checkDuplicationCmd.Flags().StringP(Flag_Duplication_Target, "t", "", "target hash file or directory")
 	checkDuplicationCmd.Flags().BoolP(Flag_Duplication_ShowExistsOnly, "e", false, "show exist files only")
 	checkDuplicationCmd.Flags().BoolP(Flag_Duplication_ShowMissingOnly, "m", false, "show missing files only")
 	checkDuplicationCmd.Flags().BoolP(Flag_Duplication_PrintSourcePathOnly, "f", false, "print only source file path")
