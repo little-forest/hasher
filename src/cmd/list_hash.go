@@ -19,7 +19,6 @@ import (
 	"io"
 	"os"
 
-	. "github.com/little-forest/hasher/common"
 	"github.com/little-forest/hasher/core"
 	"github.com/spf13/cobra"
 )
@@ -55,15 +54,9 @@ func runListHash(cmd *cobra.Command, args []string) (int, error) {
 	}
 }
 
-func listHashAll(dirPaths []string, alg *core.HashAlg, outPath string, updateHash bool) error {
-	// check directory
-	for _, p := range dirPaths {
-		if err := EnsureDirectory(p); err != nil {
-			return err
-		}
-	}
-
+func listHashAll(paths []string, alg *core.HashAlg, outPath string, updateHash bool) error {
 	verbose := false
+
 	var writer io.Writer
 	if outPath != "" {
 		f, err := os.Create(outPath)
@@ -73,14 +66,23 @@ func listHashAll(dirPaths []string, alg *core.HashAlg, outPath string, updateHas
 		// nolint:errcheck
 		defer f.Close()
 		writer = f
-		verbose = true
+
+		// verobse mode when the output is a file and the update flag is true
+		if updateHash {
+			verbose = true
+		}
 	} else {
 		writer = os.Stdout
 	}
 
-	notifier := NewHasherProgressNotifier(1, verbose)
+	var notifier core.ProgressNotifier
 
-	// err := core.ListHash(dirPaths, core.NewDefaultHashAlg(), writer, notifier, verbose, noCheck)
-	err := core.ListHash2(dirPaths, core.NewDefaultHashAlg(), writer, notifier, verbose, updateHash)
+	if verbose {
+		notifier = NewHasherProgressNotifier(1, verbose)
+	} else {
+		notifier = NewStdioProgressNotifier()
+	}
+
+	err := core.ListHash2(paths, core.NewDefaultHashAlg(), writer, notifier, verbose, updateHash)
 	return err
 }
