@@ -195,10 +195,7 @@ func NewUpdateResult(workerId int, task UpdateTask, hash string, message string,
 }
 
 func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceUpdate bool, notifier ProgressNotifier) error {
-	total, err := CountAllFiles(paths, notifier.IsVerbose())
-	if err != nil {
-		return err
-	}
+	total := CountAllFiles(paths, notifier.IsVerbose())
 
 	notifier.SetTotal(total)
 	notifier.Start()
@@ -323,10 +320,7 @@ func adjustNumOfWorkers(numOfWorkers int, numOfCPU int) int {
 }
 
 func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifier, verbose bool, noCheck bool) error {
-	total, err := CountAllFiles(dirPaths, watcher.IsVerbose())
-	if err != nil {
-		return err
-	}
+	total := CountAllFiles(dirPaths, watcher.IsVerbose())
 
 	watcher.SetTotal(total)
 	watcher.Start()
@@ -335,6 +329,7 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressNoti
 	// nolint:errcheck
 	defer bw.Flush()
 
+	var err error
 	count := 1
 	for _, dp := range dirPaths {
 		err = filepath.WalkDir(dp, func(path string, info fs.DirEntry, e error) error {
@@ -388,4 +383,122 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressNoti
 	watcher.Shutdown()
 
 	return err
+}
+
+func ListHash2(paths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifier, verbose bool, updateHash bool) error {
+	if verbose {
+		if watcher == nil || !updateHash {
+			return fmt.Errorf("parameter integrity error (may be bug!)")
+		}
+	}
+
+	var total int
+	if verbose {
+		total = CountAllFiles(paths, watcher.IsVerbose())
+
+		watcher.SetTotal(total)
+		watcher.Start()
+	}
+
+	bw := bufio.NewWriterSize(w, 16384)
+	// nolint:errcheck
+	defer bw.Flush()
+
+	count := 1
+	for _, p := range paths {
+
+		t, err := CheckFileType(p)
+		if err != nil {
+			errMsg := fmt.Sprintf("Failed to stat : %s", err.Error())
+			if verbose {
+				watcher.NotifyTaskStart(0, p)
+				watcher.NotifyError(0, errMsg)
+				watcher.NotifyTaskDone(0, getUpdateMessage(false, err))
+				watcher.NotifyProgress(count, total)
+				count++
+			} else {
+				ShowErrorMsg(errMsg)
+			}
+		}
+
+		switch t {
+		case RegularFile:
+			watcher.NotifyTaskStart(0, p)
+			updated, err := listSingleFileHash(p, bw, updateHash, alg)
+			if err != nil {
+				watcher.NotifyError(0, err.Error())
+			}
+			watcher.NotifyTaskDone(0, getUpdateMessage(updated, err))
+			watcher.NotifyProgress(count, total)
+			count++
+		case Directory:
+			err := WalkDir(p, func(f *os.File) error {
+				watcher.NotifyTaskStart(0, f.Name())
+				updated, err := listSingleFileHash(f.Name(), bw, updateHash, alg)
+				if err != nil {
+					watcher.NotifyError(0, err.Error())
+				}
+				watcher.NotifyTaskDone(0, getUpdateMessage(updated, err))
+				watcher.NotifyProgress(count, total)
+				count++
+				return nil
+			})
+			if err != nil {
+				errMsg := fmt.Sprintf("Failed to walkdir : %s", err.Error())
+				if verbose {
+					watcher.NotifyError(0, errMsg)
+				} else {
+					ShowErrorMsg(errMsg)
+				}
+			}
+		default:
+			ShowWarn("Unsupported file type : %s", p)
+		}
+	}
+
+	if verbose {
+		watcher.Shutdown()
+	}
+
+	return nil
+}
+
+func getUpdateMessage(updated bool, err error) string {
+	if err != nil {
+		return Mark_Error
+	}
+	if !updated {
+		return Mark_OK
+	} else {
+		return Mark_Updated
+	}
+}
+
+// listSingleFileHash shows given file's hash value.
+// path is representing a regular file path,
+// When update specified true, if the hash has not been computed,
+// calculate it and return true if it has been updated.
+func listSingleFileHash(path string, writer *bufio.Writer, update bool, alg *HashAlg) (bool, error) {
+	var hash *Hash
+	var changed bool
+	var e error
+	absPath, _ := filepath.Abs(path)
+	if update {
+		changed, hash, e = UpdateHashStrictly(absPath, alg, false)
+		if e != nil {
+			return false, fmt.Errorf("Failed to update hash : %s", e.Error())
+		}
+	} else {
+		hash, e = GetHash(absPath, alg)
+		if e != nil {
+			return false, fmt.Errorf("Failed to get hash : %s", e.Error())
+		}
+		if hash == nil {
+			// no-update mode is not intended for ProgresWatcher
+			ShowWarn("The hash value has not yet been calculated. : %s", absPath)
+			return false, nil
+		}
+	}
+	fmt.Fprintf(writer, "%s\n", hash.Tsv())
+	return changed, nil
 }

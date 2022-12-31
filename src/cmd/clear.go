@@ -89,10 +89,8 @@ func clear(path string) error {
 }
 
 func clearRecursively(dirPath string, verbose bool) error {
-	totalCount, err := CountFiles(dirPath, verbose)
-	if err != nil {
-		return err
-	}
+	paths := []string{dirPath}
+	totalCount := CountAllFiles(paths, verbose)
 
 	var n core.ProgressNotifier = NewHasherProgressNotifier(1, verbose)
 	n.SetTotal(totalCount)
@@ -100,7 +98,7 @@ func clearRecursively(dirPath string, verbose bool) error {
 
 	count := 0
 
-	err = filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, err error) error {
+	err := filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to filepath.Walk")
 		}

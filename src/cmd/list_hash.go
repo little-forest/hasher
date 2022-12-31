@@ -19,18 +19,17 @@ import (
 	"io"
 	"os"
 
-	. "github.com/little-forest/hasher/common"
 	"github.com/little-forest/hasher/core"
 	"github.com/spf13/cobra"
 )
 
 const Flag_ListHash_Out = "out"
-const Flag_ListHash_NoCheck = "no-check"
+const Flag_ListHash_UpdateHash = "update-hash"
 
 // listHashCmd represents the listHash command
 var listHashCmd = &cobra.Command{
-	Use:   "list-hash [-o OUT_FILE] TARGET_DIR...",
-	Short: "output hash list in json format",
+	Use:   "list-hash [-u] [-o OUT_FILE] TARGET...",
+	Short: "Output hash list in TSV format",
 	Long:  ``,
 	RunE:  statusWrapper.RunE(runListHash),
 }
@@ -39,15 +38,15 @@ func init() {
 	rootCmd.AddCommand(listHashCmd)
 
 	listHashCmd.Flags().StringP(Flag_ListHash_Out, "o", "", "output file path")
-	listHashCmd.Flags().BoolP(Flag_ListHash_NoCheck, "n", false, "Do not check if the hash is up-to-date. This may result in fast processing but incorrect results.")
+	listHashCmd.Flags().BoolP(Flag_ListHash_UpdateHash, "u", false, "When the hash is NOT up-to-date. Update it.")
 }
 
 func runListHash(cmd *cobra.Command, args []string) (int, error) {
 	out, _ := cmd.Flags().GetString(Flag_ListHash_Out)
-	noCheck, _ := cmd.Flags().GetBool(Flag_ListHash_NoCheck)
+	updateHash, _ := cmd.Flags().GetBool(Flag_ListHash_UpdateHash)
 	alg := core.NewDefaultHashAlg()
 
-	err := listHashAll(args, alg, out, noCheck)
+	err := listHashAll(args, alg, out, updateHash)
 	if err != nil {
 		return 1, err
 	} else {
@@ -55,15 +54,9 @@ func runListHash(cmd *cobra.Command, args []string) (int, error) {
 	}
 }
 
-func listHashAll(dirPaths []string, alg *core.HashAlg, outPath string, noCheck bool) error {
-	// check directory
-	for _, p := range dirPaths {
-		if err := EnsureDirectory(p); err != nil {
-			return err
-		}
-	}
-
+func listHashAll(paths []string, alg *core.HashAlg, outPath string, updateHash bool) error {
 	verbose := false
+
 	var writer io.Writer
 	if outPath != "" {
 		f, err := os.Create(outPath)
@@ -73,13 +66,23 @@ func listHashAll(dirPaths []string, alg *core.HashAlg, outPath string, noCheck b
 		// nolint:errcheck
 		defer f.Close()
 		writer = f
-		verbose = true
+
+		// verobse mode when the output is a file and the update flag is true
+		if updateHash {
+			verbose = true
+		}
 	} else {
 		writer = os.Stdout
 	}
 
-	notifier := NewHasherProgressNotifier(1, verbose)
+	var notifier core.ProgressNotifier
 
-	err := core.ListHash(dirPaths, core.NewDefaultHashAlg(), writer, notifier, verbose, noCheck)
+	if verbose {
+		notifier = NewHasherProgressNotifier(1, verbose)
+	} else {
+		notifier = NewStdioProgressNotifier()
+	}
+
+	err := core.ListHash2(paths, core.NewDefaultHashAlg(), writer, notifier, verbose, updateHash)
 	return err
 }

@@ -41,6 +41,11 @@ type progressEvent struct {
 	Total int
 }
 
+type warningEvent struct {
+	commonEvent
+	Message string
+}
+
 type errorEvent struct {
 	commonEvent
 	Message string
@@ -116,6 +121,16 @@ func (n HasherProgressNotifier) NotifyProgress(done int, total int) {
 	e := progressEvent{
 		Done:  done,
 		Total: total,
+	}
+	n.notifyQueue <- e
+}
+
+func (n HasherProgressNotifier) NotifyWarning(workerId int, message string) {
+	e := warningEvent{
+		commonEvent: commonEvent{
+			workerId: workerId,
+		},
+		Message: message,
 	}
 	n.notifyQueue <- e
 }
@@ -203,6 +218,19 @@ func (n *HasherProgressNotifier) showDone(workerId int, message string) {
 	n.messages[workerId] = n.messages[workerId] + " " + message
 
 	n.showTaskMessage(workerId)
+}
+
+func (n HasherProgressNotifier) showWarning(msg string) {
+	if n.Verbose {
+		// Insert one line to bottom
+		fmt.Print(aec.NextLine(uint(n.NumOfWorkers)))
+		fmt.Printf("\n")
+		fmt.Print(aec.PreviousLine(uint(n.NumOfWorkers + 1)))
+
+		fmt.Print("\x1b[1L") // insert one line
+	}
+	// TODO: when stderr is redirected to file, display is broken
+	fmt.Fprintln(os.Stderr, C_yellow.Apply(msg))
 }
 
 func (n HasherProgressNotifier) showError(msg string) {

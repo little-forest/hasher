@@ -17,12 +17,10 @@ package common
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 
 	"github.com/morikuni/aec"
-	"github.com/pkg/errors"
 )
 
 // ANSI escape sequences
@@ -45,7 +43,10 @@ var C_darkorange3 = aec.EmptyBuilder.Color8BitF(166).ANSI
 var C_lime = aec.EmptyBuilder.Color8BitF(10).ANSI
 
 var Mark_OK = fmt.Sprintf("[%s]", C_green.Apply("OK"))
+var Mark_Error = fmt.Sprintf("[%s]", C_red.Apply("ERROR"))
 var Mark_Failed = fmt.Sprintf("[%s]", C_red.Apply("FAILED"))
+var Mark_Warning = fmt.Sprintf("[%s]", C_yellow.Apply("WARNING"))
+var Mark_Updated = fmt.Sprintf("[%s]", C_green.Apply("UPDATE"))
 
 func ShowWarn(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, "["+C_yellow.Apply("WARNING")+"] "+format+"\n", args...)
@@ -162,48 +163,53 @@ func CleanPath(path string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
-func CountAllFiles(paths []string, verbose bool) (int, error) {
-	total := 0
-	for _, p := range paths {
-		files, err := CountFiles(p, verbose)
-		total += files
-		if err != nil {
-			return total, err
-		}
-	}
-	return total, nil
-}
-
-func CountFiles(path string, verbose bool) (int, error) {
+// CountAllFiles counts files under the specified file or directory.
+func CountAllFiles(paths []string, verbose bool) int {
 	threshold := 1000
 
 	if verbose {
-		fmt.Printf("Counting files : %s ... ", path)
+		fmt.Print(C_cyan.Apply("Counting files... "))
 		HideCursor()
 	}
 
 	count := 0
-	err := filepath.WalkDir(path, func(path string, info fs.DirEntry, err error) error {
+	for _, p := range paths {
+		t, err := CheckFileType(p)
 		if err != nil {
-			return errors.Wrap(err, "failed to filepath.Walk")
+			fmt.Fprintf(os.Stderr, "[%s] %s\n", C_red.Apply("ERROR"), err.Error())
+			continue
 		}
 
-		if info.IsDir() {
-			return nil
+		switch t {
+		case RegularFile:
+			count++
+			if verbose && (count%threshold) == 0 {
+				fmt.Printf("\x1b7%d\x1b8", count)
+			}
+
+		case Directory:
+			err := WalkDir(p, func(f *os.File) error {
+				count++
+				if verbose && (count%threshold) == 0 {
+					fmt.Printf("\x1b7%d\x1b8", count)
+				}
+				return nil
+			})
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "[%s] %s\n", C_red.Apply("ERROR"), err.Error())
+				continue
+			}
+		default:
+			fmt.Fprintf(os.Stderr, "[%s] Ignored : %s\n", C_yellow.Apply("WARN"), p)
 		}
 
-		if verbose && (count%threshold) == 0 {
-			fmt.Printf("\x1b7%d\x1b8", count)
-		}
-		count++
+	}
 
-		return nil
-	})
 	if verbose {
 		fmt.Printf("%d\n", count)
 		ShowCursor()
 	}
-	return count, err
+	return count
 }
 
 func ShowCursor() {
