@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/little-forest/hasher/common"
 	. "github.com/little-forest/hasher/common"
 	"github.com/pkg/errors"
 )
@@ -388,7 +387,7 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressNoti
 
 func ListHash2(paths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifier, verbose bool, updateHash bool) error {
 	if verbose {
-		if watcher == nil || updateHash == false {
+		if watcher == nil || !updateHash {
 			return fmt.Errorf("parameter integrity error (may be bug!)")
 		}
 	}
@@ -433,7 +432,7 @@ func ListHash2(paths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifi
 			watcher.NotifyProgress(count, total)
 			count++
 		case Directory:
-			common.WalkDir(p, func(f *os.File) error {
+			err := WalkDir(p, func(f *os.File) error {
 				watcher.NotifyTaskStart(0, f.Name())
 				updated, err := listSingleFileHash(f.Name(), bw, updateHash, alg)
 				if err != nil {
@@ -444,6 +443,14 @@ func ListHash2(paths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifi
 				count++
 				return nil
 			})
+			if err != nil {
+				errMsg := fmt.Sprintf("Failed to walkdir : %s", err.Error())
+				if verbose {
+					watcher.NotifyError(0, errMsg)
+				} else {
+					ShowErrorMsg(errMsg)
+				}
+			}
 		default:
 			ShowWarn("Unsupported file type : %s", p)
 		}

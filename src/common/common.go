@@ -168,7 +168,7 @@ func CountAllFiles(paths []string, verbose bool) int {
 	threshold := 1000
 
 	if verbose {
-		fmt.Printf(C_cyan.Apply("Counting files... "))
+		fmt.Print(C_cyan.Apply("Counting files... "))
 		HideCursor()
 	}
 
@@ -188,13 +188,17 @@ func CountAllFiles(paths []string, verbose bool) int {
 			}
 
 		case Directory:
-			WalkDir(p, func(f *os.File) error {
+			err := WalkDir(p, func(f *os.File) error {
 				count++
 				if verbose && (count%threshold) == 0 {
 					fmt.Printf("\x1b7%d\x1b8", count)
 				}
 				return nil
 			})
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "[%s] %s\n", C_red.Apply("ERROR"), err.Error())
+				continue
+			}
 		default:
 			fmt.Fprintf(os.Stderr, "[%s] Ignored : %s\n", C_yellow.Apply("WARN"), p)
 		}
