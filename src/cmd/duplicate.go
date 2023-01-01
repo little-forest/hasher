@@ -31,9 +31,9 @@ const Flag_Duplication_PrintSourcePathOnly = "print-source-path-only"
 const Flag_Duplication_PrintZero = "print0"
 
 const (
-	SHOW_ALWAYS       = iota + 1
-	SHOW_EXISTS_ONLY  = 1
-	SHOW_MISSING_ONLY = 2
+	SHOW_ALWAYS = iota + 1
+	SHOW_EXISTS_ONLY
+	SHOW_MISSING_ONLY
 )
 
 type checkDuplicationOption struct {
@@ -178,11 +178,17 @@ func doCheckDuplication(src *core.HashStore, target *core.HashStore, opt checkDu
 
 	for _, hash := range src.Values() {
 		sames := target.Get(hash.String())
+		hasSame := len(sames) > 0
 
-		if len(sames) > 0 && opt.ShowMode != SHOW_MISSING_ONLY {
+		// Src Target | no-opt missing-only existing-only
+		// -----------+-----------------------------------
+		//  o    o    |   o         -            o
+		//  o    -    |   o         o            -
+		//  -    o    |  N/A       N/A          N/A
+		if hasSame && opt.ShowMode != SHOW_MISSING_ONLY {
 			fmt.Print(makeResult(hash, sames, opt.PrintSourcePathOnly))
 			fmt.Print(sep)
-		} else if len(sames) == 0 && opt.ShowMode != SHOW_EXISTS_ONLY {
+		} else if !hasSame && opt.ShowMode != SHOW_EXISTS_ONLY {
 			fmt.Print(makeResult(hash, sames, opt.PrintSourcePathOnly))
 			fmt.Print(sep)
 		}
