@@ -24,7 +24,7 @@ jobs:
 
       - uses: aquaproj/aqua-installer@v2.0.2
         with:
-          aqua_version: v1.32.0
+          aqua_version: v1.32.3
 
       - name: Setup Go
         uses: actions/setup-go@v3
