@@ -16,7 +16,7 @@ curl -sLo - https://github.com/little-forest/hasher/releases/download/${HASHER_V
 
 ```
 cd src
-goreleaser build -f ../.goreleaser.yml --rm-dist --snapshot
+goreleaser build -f ../.goreleaser.yml --clean --snapshot
 ```
 
 ## pre-commit
