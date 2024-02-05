@@ -3,7 +3,7 @@
 # Install
 
 ```bash
-HASHER_VERSION=v0.0.8
+HASHER_VERSION=v0.1.2
 INSTALL_DIR=~/bin
 
 curl -sLo - https://github.com/little-forest/hasher/releases/download/${HASHER_VERSION}/hasher_linux_x86_64.tar.gz \
