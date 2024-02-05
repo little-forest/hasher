@@ -19,7 +19,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v5
         with:
           version: latest
-          args: release --rm-dist -f ../.goreleaser.yml
+          args: release --clean -f ../.goreleaser.yml
           workdir: src
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
