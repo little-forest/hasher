@@ -6,4 +6,4 @@ registries:
   ref: v4.151.0 # renovate: depName=aquaproj/aqua-registry
 
 packages:
-- name: suzuki-shunsuke/github-comment@v6.0.3
+- name: suzuki-shunsuke/github-comment@v6.0.4
