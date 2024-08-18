@@ -60,9 +60,9 @@ func runCalcHash(cmd *cobra.Command, args []string) (int, error) {
 			continue
 		}
 		if f, _ := cmd.Flags().GetBool(Flag_Calc_NoShowPath); !f {
-			fmt.Fprintf(os.Stdout, "%s\t%s\n", hash, v)
+			fmt.Fprintf(os.Stdout, "%s\t%s\n", hash, v) // nolint:errcheck
 		} else {
-			fmt.Fprintf(os.Stdout, "%s\n", hash)
+			fmt.Fprintf(os.Stdout, "%s\n", hash) // nolint:errcheck
 		}
 	}
 	return 0, nil
