@@ -6,7 +6,7 @@ require (
 	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/morikuni/aec v1.0.0
 	github.com/pkg/errors v0.9.1
-	github.com/pkg/xattr v0.4.9
+	github.com/pkg/xattr v0.4.10
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
 )
