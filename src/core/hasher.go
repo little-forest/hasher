@@ -360,7 +360,7 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressNoti
 				if hash == nil {
 					fmt.Fprintf(os.Stderr, "No hash data : %s\n", absPath)
 				} else {
-					fmt.Fprintf(bw, "%s\n", hash.Tsv())
+					fmt.Fprintf(bw, "%s\n", hash.Tsv()) // nolint:errcheck
 				}
 			}
 			count++
@@ -499,6 +499,6 @@ func listSingleFileHash(path string, writer *bufio.Writer, update bool, alg *Has
 			return false, nil
 		}
 	}
-	fmt.Fprintf(writer, "%s\n", hash.Tsv())
+	fmt.Fprintf(writer, "%s\n", hash.Tsv()) // nolint:errcheck
 	return changed, nil
 }
