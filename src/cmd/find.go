@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"os"
 
-	. "github.com/little-forest/hasher/common"
+	. "github.com/little-forest/hasher/common" // nolint:staticcheck
 	"github.com/little-forest/hasher/core"
 	"github.com/spf13/cobra"
 )
@@ -82,7 +82,7 @@ func runFind(cmd *cobra.Command, args []string) (int, error) {
 			return 0, nil
 		}
 	}
-	return 1, fmt.Errorf("Invalid argument")
+	return 1, fmt.Errorf("invalid argument")
 }
 
 type findNoHashWalker struct {

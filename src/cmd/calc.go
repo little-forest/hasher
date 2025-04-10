@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 
-	. "github.com/little-forest/hasher/common"
+	. "github.com/little-forest/hasher/common" // nolint:staticcheck
 	"github.com/little-forest/hasher/core"
 	"github.com/spf13/cobra"
 )

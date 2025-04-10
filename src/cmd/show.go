@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/little-forest/hasher/common"
+	. "github.com/little-forest/hasher/common" // nolint:staticcheck
 	"github.com/little-forest/hasher/core"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"

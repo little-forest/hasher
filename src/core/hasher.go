@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/little-forest/hasher/common"
+	. "github.com/little-forest/hasher/common" // nolint:staticcheck
 	"github.com/pkg/errors"
 )
 
@@ -81,7 +81,7 @@ func UpdateHashStrictly(path string, alg *HashAlg, forceUpdate bool) (bool, *Has
 		}
 		if !forceUpdate && !changed {
 			// update only checked time
-			err := updateHashCheckedTime(file)
+			err := updateHashCheckedTime(file) // nolint:govet
 			if err != nil {
 				err = NewUpdateError(err)
 			}
@@ -177,11 +177,11 @@ func NewUpdateTask(path string) UpdateTask {
 }
 
 type UpdateResult struct {
-	WorkerId int
+	Err      error
 	Task     UpdateTask
 	Hash     string
 	Message  string
-	Err      error
+	WorkerId int
 }
 
 func NewUpdateResult(workerId int, task UpdateTask, hash string, message string, err error) UpdateResult {
@@ -259,7 +259,7 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 
 		// walk directory
 		// TODO: error check
-		// nolint:staticcheck
+		// nolint:staticcheck,ineffassign
 		err = filepath.WalkDir(p, func(path string, info fs.DirEntry, err error) error {
 			if err != nil {
 				return err
@@ -486,12 +486,12 @@ func listSingleFileHash(path string, writer *bufio.Writer, update bool, alg *Has
 	if update {
 		changed, hash, e = UpdateHashStrictly(absPath, alg, false)
 		if e != nil {
-			return false, fmt.Errorf("Failed to update hash : %s", e.Error())
+			return false, fmt.Errorf("failed to update hash : %s", e.Error())
 		}
 	} else {
 		hash, e = GetHash(absPath, alg)
 		if e != nil {
-			return false, fmt.Errorf("Failed to get hash : %s", e.Error())
+			return false, fmt.Errorf("failed to get hash : %s", e.Error())
 		}
 		if hash == nil {
 			// no-update mode is not intended for ProgresWatcher

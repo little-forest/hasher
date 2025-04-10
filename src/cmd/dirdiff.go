@@ -18,8 +18,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/little-forest/hasher/common"
-	. "github.com/little-forest/hasher/common"
+	"github.com/little-forest/hasher/common"   // nolint:staticcheck
+	. "github.com/little-forest/hasher/common" // nolint:staticcheck
 	"github.com/little-forest/hasher/core"
 	"github.com/morikuni/aec"
 	"github.com/spf13/cobra"
@@ -80,13 +80,14 @@ func dirDiff(basePath string, targetPath string, showOnlyDiff bool, verbose bool
 
 	// display
 	for _, pair := range dirPairs {
-		if pair.Status == core.BASE_ONLY {
+		switch pair.Status {
+		case core.BASE_ONLY:
 			fmt.Println(C_cyan.Apply(fmt.Sprintf("[+] %s", pair.Path())))
 			displayDir(pair.Base, showOnlyDiff)
-		} else if pair.Status == core.TARGET_ONLY {
+		case core.TARGET_ONLY:
 			fmt.Println(C_pink.Apply(fmt.Sprintf("[-] %s", pair.Path())))
 			displayDir(pair.Target, showOnlyDiff)
-		} else {
+		default:
 			// same
 			if pair.Base.IsAllSame() && !showOnlyDiff {
 				fmt.Println(C_gray.Apply(fmt.Sprintf("[=] %s", pair.Path())))

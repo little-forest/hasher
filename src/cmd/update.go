@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"os"
 
-	. "github.com/little-forest/hasher/common"
+	. "github.com/little-forest/hasher/common" // nolint:staticcheck
 	"github.com/little-forest/hasher/core"
 	"github.com/spf13/cobra"
 )
@@ -65,7 +65,7 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 				continue
 			} else {
 				// update file
-				changed, hash, err := core.UpdateHash(p, alg, forceUpdate)
+				changed, hash, err := core.UpdateHash(p, alg, forceUpdate) // nolint:govet
 				if err == nil && verbose {
 					mark := ""
 					if changed {
@@ -75,7 +75,7 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 				}
 			}
 
-			if err != nil {
+			if err != nil { // nolint:govet
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 				errorStatus = err
 				status = 1
