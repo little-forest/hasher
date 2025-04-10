@@ -1,19 +1,21 @@
+version: "2"
+
 run:
   timeout: 10m
 
-Linters:
-  disable-all: true
+linters:
   enable:
     - govet
     - errcheck
     - staticcheck
-    - gosimple
     - misspell
+  disable:
+    - unused
+
+  settings:
+    govet:
+      enable-all: true
 
 issues:
   exclude-use-default: false
-
-  Linters-settings:
-    govet:
-      enable-all: true
 

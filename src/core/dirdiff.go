@@ -14,8 +14,8 @@ import (
 )
 
 type DirDiff struct {
-	Path  string
 	files map[string]*FileDiff
+	Path  string
 }
 
 func (d *DirDiff) add(f *FileDiff) {

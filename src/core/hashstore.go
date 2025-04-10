@@ -106,23 +106,23 @@ func (s *HashStore) LoadHashData(path string) error {
 
 func (s HashStore) parseHashLine(line []string) (*Hash, error) {
 	if len(line) < 4 {
-		return nil, fmt.Errorf("Invalid format : %v", line)
+		return nil, fmt.Errorf("invalid format : %v", line)
 	}
 	modTime, err := strconv.Atoi(line[2])
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse modTime : %v", line)
+		return nil, fmt.Errorf("failed to parse modTime : %v", line)
 	}
 
 	pos := strings.Index(line[3], ":")
 	if pos == -1 {
-		return nil, fmt.Errorf("Invalid hash value format : %v", line)
+		return nil, fmt.Errorf("invalid hash value format : %v", line)
 	}
 	alg := NewHashAlgFromString(line[3][0:pos])
 	hashValue := line[3][pos+1:]
 
 	hash, err := NewHashFromString(line[0], alg, hashValue, int64(modTime))
 	if err != nil {
-		return nil, fmt.Errorf("Failed to patse tsv : %v", line)
+		return nil, fmt.Errorf("failed to patse tsv : %v", line)
 	}
 	return hash, nil
 }

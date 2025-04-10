@@ -20,11 +20,11 @@ const (
 )
 
 type FileDiff struct {
+	ModTime      time.Time
+	Parent       *DirDiff
 	Basename     string
 	PairFileName string
-	Parent       *DirDiff
 	HashValue    []byte
-	ModTime      time.Time
 	Status       DiffStatus
 }
 

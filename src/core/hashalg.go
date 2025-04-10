@@ -22,9 +22,9 @@ import (
 )
 
 type HashAlg struct {
-	Alg      crypto.Hash
 	AlgName  string
 	AttrName string
+	Alg      crypto.Hash
 }
 
 func NewDefaultHashAlg() *HashAlg {

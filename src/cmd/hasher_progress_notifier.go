@@ -8,7 +8,7 @@ import (
 
 	"path/filepath"
 
-	. "github.com/little-forest/hasher/common"
+	. "github.com/little-forest/hasher/common" // nolint:staticcheck
 	"github.com/little-forest/hasher/core"
 	"github.com/morikuni/aec"
 )
@@ -26,13 +26,13 @@ func (e commonEvent) WorkerId() int {
 }
 
 type startEvent struct {
-	commonEvent
 	TaskName string
+	commonEvent
 }
 
 type doneEvent struct {
-	commonEvent
 	Message string
+	commonEvent
 }
 
 type progressEvent struct {
@@ -42,22 +42,22 @@ type progressEvent struct {
 }
 
 type warningEvent struct {
-	commonEvent
 	Message string
+	commonEvent
 }
 
 type errorEvent struct {
-	commonEvent
 	Message string
+	commonEvent
 }
 
 type HasherProgressNotifier struct {
+	notifyQueue  chan progressNotfierEvent
+	messages     []string
 	NumOfWorkers int
-	Verbose      bool
 	done         int
 	total        int
-	messages     []string
-	notifyQueue  chan progressNotfierEvent
+	Verbose      bool
 	isClosed     bool
 }
 
@@ -89,10 +89,8 @@ func (n *HasherProgressNotifier) Start() {
 func (n *HasherProgressNotifier) Shutdown() {
 	close(n.notifyQueue)
 
-	for {
-		if n.isClosed {
-			break
-		}
+	for !n.isClosed {
+
 		time.Sleep(time.Microsecond * 10)
 	}
 }

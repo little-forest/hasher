@@ -18,7 +18,7 @@ package cmd
 import (
 	"fmt"
 
-	. "github.com/little-forest/hasher/common"
+	. "github.com/little-forest/hasher/common" // nolint:staticcheck
 	"github.com/little-forest/hasher/core"
 	"github.com/spf13/cobra"
 )
@@ -38,11 +38,11 @@ const (
 
 type checkDuplicationOption struct {
 	HashAlg             *core.HashAlg
-	PrintSourcePathOnly bool
-	PrintZero           bool
-	ShowMode            int
 	Source              []string
 	Target              []string
+	ShowMode            int
+	PrintSourcePathOnly bool
+	PrintZero           bool
 }
 
 // checkDuplicationCmd represents the compare command
