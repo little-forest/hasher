@@ -7,7 +7,7 @@ require (
 	github.com/morikuni/aec v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/xattr v0.4.12
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 )
 
