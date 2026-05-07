@@ -15,7 +15,3 @@ linters:
   settings:
     govet:
       enable-all: true
-
-issues:
-  exclude-use-default: false
-
