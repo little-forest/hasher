@@ -22,7 +22,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - uses: aquaproj/aqua-installer@v4.0.4
+      - uses: aquaproj/aqua-installer@v4.0.5
         with:
           aqua_version: v2.59.1
 
