@@ -29,6 +29,21 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// signal.NotifyContext hands cmd a cancellable context, but it also
+	// disables the default disposition for these signals — and nothing below
+	// cmd takes a context yet, so cancelling it cannot unwind the work in
+	// progress. Without this the process would ignore Ctrl-C entirely.
+	// Watch the signals directly rather than ctx.Done(), which the deferred
+	// stop() also closes on a normal exit. Once the hashing layer honours
+	// cmd.Context(), this can go away and the interrupted run can be unwound
+	// properly instead.
+	go func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+		<-sig
+		os.Exit(130)
+	}()
+
 	if err := cmd.Execute(ctx); err != nil {
 		os.Exit(1)
 	}
