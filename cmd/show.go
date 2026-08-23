@@ -23,8 +23,7 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/little-forest/hasher/common" // nolint:staticcheck
-	"github.com/little-forest/hasher/core"
+	"github.com/little-forest/hasher/hashcore"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -44,14 +43,14 @@ func init() {
 func runShow(cmd *cobra.Command, args []string) (int, error) {
 	recuesive, _ := cmd.Flags().GetBool(Flag_root_Recursive)
 
-	alg := core.NewDefaultHashAlg()
+	alg := hashcore.NewDefaultHashAlg()
 
 	showHeader()
 
 	status := 0
 	var errResult error
 	for _, p := range args {
-		isDir, err := IsDirectory(p)
+		isDir, err := hashcore.IsDirectory(p)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			continue
@@ -76,17 +75,17 @@ func runShow(cmd *cobra.Command, args []string) (int, error) {
 	return status, errResult
 }
 
-func showAttributes(path string, hashAlg *core.HashAlg) error {
-	f, err := OpenFile(path)
+func showAttributes(path string, hashAlg *hashcore.HashAlg) error {
+	f, err := hashcore.OpenFile(path)
 	if err != nil {
 		return err
 	}
 
-	hash := core.GetXattr(f, hashAlg.AttrName)
-	size := core.GetXattr(f, core.Xattr_size)
+	hash := hashcore.GetXattr(f, hashAlg.AttrName)
+	size := hashcore.GetXattr(f, hashcore.Xattr_size)
 
-	mTime := getUnixTimeNano(f, core.Xattr_modifiedTime)
-	hTime := getUnixTimeNano(f, core.Xattr_hashCheckedTime)
+	mTime := getUnixTimeNano(f, hashcore.Xattr_modifiedTime)
+	hTime := getUnixTimeNano(f, hashcore.Xattr_hashCheckedTime)
 
 	fmt.Printf("%s\t%s\t%s\t%s\t%s\n", path, hash, size, mTime, hTime)
 
@@ -99,14 +98,14 @@ func showHeader() {
 
 func getUnixTimeNano(f *os.File, attrName string) string {
 	timeStr := ""
-	t, err := strconv.ParseInt(core.GetXattr(f, attrName), 10, 64)
+	t, err := strconv.ParseInt(hashcore.GetXattr(f, attrName), 10, 64)
 	if err == nil {
 		timeStr = time.Unix(0, t).Format(time.RFC3339Nano)
 	}
 	return timeStr
 }
 
-func showAttributesRecursively(dirPath string, hashAlg *core.HashAlg) error {
+func showAttributesRecursively(dirPath string, hashAlg *hashcore.HashAlg) error {
 	err := filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to filepath.Walk")
@@ -116,7 +115,7 @@ func showAttributesRecursively(dirPath string, hashAlg *core.HashAlg) error {
 			return nil
 		}
 
-		showErr := showAttributes(path, core.NewDefaultHashAlg())
+		showErr := showAttributes(path, hashcore.NewDefaultHashAlg())
 		if showErr != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", showErr.Error())
 		}

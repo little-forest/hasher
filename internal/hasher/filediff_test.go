@@ -1,4 +1,4 @@
-package core
+package hasher
 
 import (
 	"encoding/hex"
@@ -6,11 +6,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/little-forest/hasher/hashcore"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewFileDiff(t *testing.T) {
-	alg := NewDefaultHashAlg()
+	alg := hashcore.NewDefaultHashAlg()
 	path, expectedHashValue := makeSingleDummyFile(t, &alg.Alg)
 	expectedHashBytes, _ := hex.DecodeString(expectedHashValue)
 

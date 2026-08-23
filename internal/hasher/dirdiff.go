@@ -1,4 +1,4 @@
-package core
+package hasher
 
 import (
 	"fmt"
@@ -9,7 +9,8 @@ import (
 	"strings"
 
 	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/little-forest/hasher/common"
+	"github.com/little-forest/hasher/hashcore"
+	"github.com/little-forest/hasher/internal/term"
 	"github.com/pkg/errors"
 )
 
@@ -142,7 +143,7 @@ func (me *DirDiff) Compare(other *DirDiff) {
 	}
 }
 
-func NewDirDiff(dirPath string, alg *HashAlg) (*DirDiff, error) {
+func NewDirDiff(dirPath string, alg *hashcore.HashAlg) (*DirDiff, error) {
 	dir, err := os.Open(dirPath)
 	if err != nil {
 		return nil, err
@@ -162,12 +163,12 @@ func NewDirDiff(dirPath string, alg *HashAlg) (*DirDiff, error) {
 		if !fileInfo.IsDir() {
 			filePath := filepath.Join(dirPath, fileInfo.Name())
 			if fileInfo.Type() == fs.ModeSymlink {
-				common.ShowWarn("Skip symbolic link %s", filePath)
+				term.ShowWarn("Skip symbolic link %s", filePath)
 				continue
 			}
 			f, err := NewFileDiff(filePath, alg)
 			if err != nil {
-				common.ShowWarn("Failed to calc hash %s", err.Error())
+				term.ShowWarn("Failed to calc hash %s", err.Error())
 				continue
 			}
 			f.Parent = dirDiff
@@ -179,7 +180,7 @@ func NewDirDiff(dirPath string, alg *HashAlg) (*DirDiff, error) {
 }
 
 func DirDiffRecursively(baseDir string, targetDir string) ([]*DirPair, error) {
-	alg := NewDefaultHashAlg()
+	alg := hashcore.NewDefaultHashAlg()
 
 	// list directories
 	baseDir = normalizeDirPath(baseDir)

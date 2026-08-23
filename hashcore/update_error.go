@@ -1,4 +1,4 @@
-package core
+package hashcore
 
 type UpdateError struct {
 	cause error
@@ -17,5 +17,3 @@ func (e UpdateError) Error() string {
 func (e UpdateError) Unwrap() error {
 	return e.cause
 }
-
-var Err_updateError = &UpdateError{}

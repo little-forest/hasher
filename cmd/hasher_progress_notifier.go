@@ -8,8 +8,8 @@ import (
 
 	"path/filepath"
 
-	. "github.com/little-forest/hasher/common" // nolint:staticcheck
-	"github.com/little-forest/hasher/core"
+	"github.com/little-forest/hasher/internal/hasher"
+	"github.com/little-forest/hasher/internal/term"
 	"github.com/morikuni/aec"
 )
 
@@ -228,7 +228,7 @@ func (n HasherProgressNotifier) showWarning(msg string) {
 		fmt.Print("\x1b[1L") // insert one line
 	}
 	// TODO: when stderr is redirected to file, display is broken
-	fmt.Fprintln(os.Stderr, C_yellow.Apply(msg))
+	fmt.Fprintln(os.Stderr, term.C_yellow.Apply(msg))
 }
 
 func (n HasherProgressNotifier) showError(msg string) {
@@ -241,7 +241,7 @@ func (n HasherProgressNotifier) showError(msg string) {
 		fmt.Print("\x1b[1L") // insert one line
 	}
 	// TODO: when stderr is redirected to file, display is broken
-	fmt.Fprintln(os.Stderr, C_lred.Apply(msg))
+	fmt.Fprintln(os.Stderr, term.C_lred.Apply(msg))
 }
 
 func (n *HasherProgressNotifier) showProgress(done int, total int) {
@@ -277,4 +277,4 @@ func (n HasherProgressNotifier) chopPath(path string) string {
 }
 
 // check implementation
-var _ core.ProgressNotifier = &HasherProgressNotifier{}
+var _ hasher.ProgressNotifier = &HasherProgressNotifier{}

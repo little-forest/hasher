@@ -1,4 +1,4 @@
-package core
+package hasher
 
 type DirPairStatus uint8
 

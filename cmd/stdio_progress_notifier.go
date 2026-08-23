@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/little-forest/hasher/common"
-	"github.com/little-forest/hasher/core"
+	"github.com/little-forest/hasher/internal/hasher"
+	"github.com/little-forest/hasher/internal/term"
 )
 
 type StdioProgressNotifier struct {
@@ -40,11 +40,11 @@ func (n *StdioProgressNotifier) NotifyProgress(done int, total int) {
 }
 
 func (n *StdioProgressNotifier) NotifyWarning(workerId int, message string) {
-	fmt.Fprintln(os.Stderr, common.C_yellow.Apply(message))
+	fmt.Fprintln(os.Stderr, term.C_yellow.Apply(message))
 }
 
 func (n *StdioProgressNotifier) NotifyError(workerId int, message string) {
-	fmt.Fprintln(os.Stderr, common.C_red.Apply(message))
+	fmt.Fprintln(os.Stderr, term.C_red.Apply(message))
 }
 
 func (n *StdioProgressNotifier) IsVerbose() bool {
@@ -52,4 +52,4 @@ func (n *StdioProgressNotifier) IsVerbose() bool {
 }
 
 // check implementation
-var _ core.ProgressNotifier = &StdioProgressNotifier{}
+var _ hasher.ProgressNotifier = &StdioProgressNotifier{}

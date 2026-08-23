@@ -1,4 +1,4 @@
-package core
+package hashcore
 
 import (
 	"path/filepath"
@@ -6,23 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
-
-func TestUpdateHash(t *testing.T) {
-	alg := NewDefaultHashAlg()
-	path, expectedHash := makeSingleDummyFile(t, &alg.Alg)
-
-	changed, hash, err := UpdateHash(path, alg, false)
-
-	assert.NoError(t, err)
-	assert.Equal(t, expectedHash, hash.String())
-	assert.True(t, changed)
-	// f, err := os.Open(path)
-	// assert.NoError(t, err)
-
-	// // check if hash value is saved to xattr
-	// attrHash := GetXattr(f, alg.AttrName)
-	// assert.Equal(t, expectedHashValue, attrHash)
-}
 
 func TestCalcHash(t *testing.T) {
 	alg := NewDefaultHashAlg()

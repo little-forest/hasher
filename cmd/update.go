@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"os"
 
-	. "github.com/little-forest/hasher/common" // nolint:staticcheck
-	"github.com/little-forest/hasher/core"
+	"github.com/little-forest/hasher/hashcore"
+	"github.com/little-forest/hasher/internal/hasher"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +45,7 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 	verbose, _ := cmd.Flags().GetBool(Flag_root_Verbose)
 	recuesive, _ := cmd.Flags().GetBool(Flag_root_Recursive)
 
-	alg := core.NewDefaultHashAlg()
+	alg := hashcore.NewDefaultHashAlg()
 
 	status := 0
 	var errorStatus error
@@ -53,7 +53,7 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 	if !recuesive {
 		// normal update, file only
 		for _, p := range args {
-			isDir, err := IsDirectory(p)
+			isDir, err := hashcore.IsDirectory(p)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 				continue
@@ -65,7 +65,7 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 				continue
 			} else {
 				// update file
-				changed, hash, err := core.UpdateHash(p, alg, forceUpdate) // nolint:govet
+				changed, hash, err := hasher.UpdateHash(p, alg, forceUpdate) // nolint:govet
 				if err == nil && verbose {
 					mark := ""
 					if changed {
@@ -93,13 +93,13 @@ func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
 	return status, errorStatus
 }
 
-func updateHashConcurrently(dirPaths []string, alg *core.HashAlg, forceUpdate bool, verbose bool) error {
+func updateHashConcurrently(dirPaths []string, alg *hashcore.HashAlg, forceUpdate bool, verbose bool) error {
 	numOfWorkers := 1
 	notifier := NewHasherProgressNotifier(numOfWorkers, verbose)
 
 	paths := make([]string, 0)
 	for _, p := range dirPaths {
-		if isDir, err := IsDirectory(p); isDir && err == nil {
+		if isDir, err := hashcore.IsDirectory(p); isDir && err == nil {
 			paths = append(paths, p)
 		} else {
 			if err == nil {
@@ -111,7 +111,7 @@ func updateHashConcurrently(dirPaths []string, alg *core.HashAlg, forceUpdate bo
 	}
 
 	if len(paths) > 0 {
-		err := core.ConcurrentUpdateHash(paths, alg, numOfWorkers, forceUpdate, notifier)
+		err := hasher.ConcurrentUpdateHash(paths, alg, numOfWorkers, forceUpdate, notifier)
 		return err
 	} else {
 		return nil

@@ -23,9 +23,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/little-forest/hasher/common"   // nolint:staticcheck
-	. "github.com/little-forest/hasher/common" // nolint:staticcheck
-	"github.com/little-forest/hasher/core"
+	"github.com/little-forest/hasher/hashcore"
+	"github.com/little-forest/hasher/internal/fsutil"
+	"github.com/little-forest/hasher/internal/hasher"
+	"github.com/little-forest/hasher/internal/term"
 )
 
 // clearCmd represents the clear command
@@ -47,18 +48,18 @@ func runClear(cmd *cobra.Command, args []string) (int, error) {
 	status := 0
 	var errResult error
 	for _, p := range args {
-		ftype, err := CheckFileType(p)
+		ftype, err := hashcore.CheckFileType(p)
 		if err != nil {
-			ShowError(err)
+			term.ShowError(err)
 			continue
 		}
 
-		if ftype == SymbolicLink {
+		if ftype == hashcore.SymbolicLink {
 			// skip symlink
 			continue
 		}
 
-		if ftype == Directory {
+		if ftype == hashcore.Directory {
 			if !recuesive {
 				// skip dir
 				continue
@@ -68,7 +69,7 @@ func runClear(cmd *cobra.Command, args []string) (int, error) {
 			err = clear(p)
 		}
 		if err != nil {
-			ShowError(err)
+			term.ShowError(err)
 			status = 1
 			errResult = err
 		}
@@ -77,22 +78,22 @@ func runClear(cmd *cobra.Command, args []string) (int, error) {
 }
 
 func clear(path string) error {
-	file, err := OpenFile(path)
+	file, err := hashcore.OpenFile(path)
 	if err != nil {
 		return err
 	}
 	// skip symlink
-	if yes, _ := common.IsSymbolicLink(path); yes {
+	if yes, _ := hashcore.IsSymbolicLink(path); yes {
 		return nil
 	}
-	return core.ClearXattr(file)
+	return hashcore.ClearXattr(file)
 }
 
 func clearRecursively(dirPath string, verbose bool) error {
 	paths := []string{dirPath}
-	totalCount := CountAllFiles(paths, verbose)
+	totalCount := fsutil.CountAllFiles(paths, verbose)
 
-	var n core.ProgressNotifier = NewHasherProgressNotifier(1, verbose)
+	var n hasher.ProgressNotifier = NewHasherProgressNotifier(1, verbose)
 	n.SetTotal(totalCount)
 	n.Start()
 
@@ -108,12 +109,12 @@ func clearRecursively(dirPath string, verbose bool) error {
 		}
 
 		n.NotifyTaskStart(0, path)
-		resultMsg := Mark_OK
+		resultMsg := term.Mark_OK
 		clearErr := clear(path)
 		if clearErr != nil {
 			msg := fmt.Sprintf("Failed to clear hash : %s", clearErr.Error())
 			n.NotifyError(0, msg)
-			resultMsg = Mark_Failed
+			resultMsg = term.Mark_Failed
 		}
 		count++
 		n.NotifyTaskDone(0, resultMsg)

@@ -1,9 +1,11 @@
-package core
+package hasher
 
 import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/little-forest/hasher/hashcore"
 )
 
 type DiffStatus uint8
@@ -28,7 +30,7 @@ type FileDiff struct {
 	Status       DiffStatus
 }
 
-func NewFileDiff(filePath string, alg *HashAlg) (*FileDiff, error) {
+func NewFileDiff(filePath string, alg *hashcore.HashAlg) (*FileDiff, error) {
 	_, hash, err := UpdateHash(filePath, alg, false)
 	if err != nil && hash == nil {
 		return nil, err

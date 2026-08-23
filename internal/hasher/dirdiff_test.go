@@ -1,4 +1,4 @@
-package core
+package hasher
 
 import (
 	"os"
@@ -6,11 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/little-forest/hasher/hashcore"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewDirDiff(t *testing.T) {
-	alg := NewDefaultHashAlg()
+	alg := hashcore.NewDefaultHashAlg()
 	basedir, _ := prepareDirDiffTest_01(t, alg)
 
 	d, err := NewDirDiff(basedir, alg)
@@ -25,7 +26,7 @@ func TestNewDirDiff(t *testing.T) {
 }
 
 func TestGetChildren(t *testing.T) {
-	alg := NewDefaultHashAlg()
+	alg := hashcore.NewDefaultHashAlg()
 	basedir, _ := prepareDirDiffTest_01(t, alg)
 
 	d, err := NewDirDiff(basedir, alg)
@@ -36,7 +37,7 @@ func TestGetChildren(t *testing.T) {
 }
 
 func TestDirDiffCompare_01(t *testing.T) {
-	alg := NewDefaultHashAlg()
+	alg := hashcore.NewDefaultHashAlg()
 	meDir, otherDir := prepareDirDiffTest_01(t, alg)
 
 	me, err := NewDirDiff(meDir, alg)
@@ -55,7 +56,7 @@ func TestDirDiffCompare_01(t *testing.T) {
 }
 
 func TestDirDiffCompare_02(t *testing.T) {
-	alg := NewDefaultHashAlg()
+	alg := hashcore.NewDefaultHashAlg()
 	meDir, otherDir := prepareDirDiffTest_02(t, alg)
 
 	me, err := NewDirDiff(meDir, alg)
@@ -77,7 +78,7 @@ func TestDirDiffCompare_02(t *testing.T) {
 }
 
 func TestDirDiffCompare_03(t *testing.T) {
-	alg := NewDefaultHashAlg()
+	alg := hashcore.NewDefaultHashAlg()
 	meDir, otherDir := prepareDirDiffTest_03(t, alg)
 
 	me, err := NewDirDiff(meDir, alg)
@@ -96,7 +97,7 @@ func TestDirDiffCompare_03(t *testing.T) {
 }
 
 func TestDirDiffCompare_04(t *testing.T) {
-	alg := NewDefaultHashAlg()
+	alg := hashcore.NewDefaultHashAlg()
 	meDir, otherDir := prepareDirDiffTest_04(t, alg)
 
 	me, err := NewDirDiff(meDir, alg)
@@ -115,7 +116,7 @@ func TestDirDiffCompare_04(t *testing.T) {
 }
 
 func TestDirDiffCompare_05(t *testing.T) {
-	alg := NewDefaultHashAlg()
+	alg := hashcore.NewDefaultHashAlg()
 	meDir, otherDir := prepareDirDiffTest_05(t, alg)
 
 	me, err := NewDirDiff(meDir, alg)
@@ -134,7 +135,7 @@ func TestDirDiffCompare_05(t *testing.T) {
 }
 
 func TestDirDiffCompare_06(t *testing.T) {
-	alg := NewDefaultHashAlg()
+	alg := hashcore.NewDefaultHashAlg()
 	meDir, otherDir := prepareDirDiffTest_06(t, alg)
 
 	me, err := NewDirDiff(meDir, alg)
@@ -160,7 +161,7 @@ func TestDirDiffCompare_06(t *testing.T) {
 //	[=] test01 <-> test01
 //	[=] test02 <-> test02
 //	[=] test03 <-> test03
-func prepareDirDiffTest_01(t *testing.T, alg *HashAlg) (string, string) {
+func prepareDirDiffTest_01(t *testing.T, alg *hashcore.HashAlg) (string, string) {
 	t.Helper()
 
 	meDir := t.TempDir()
@@ -190,7 +191,7 @@ func prepareDirDiffTest_01(t *testing.T, alg *HashAlg) (string, string) {
 //	[~] test04 <-> test04
 //	[+] test05 <->
 //	[-]        <-> test06
-func prepareDirDiffTest_02(t *testing.T, alg *HashAlg) (string, string) {
+func prepareDirDiffTest_02(t *testing.T, alg *hashcore.HashAlg) (string, string) {
 	t.Helper()
 
 	meDir := t.TempDir()
@@ -232,7 +233,7 @@ func prepareDirDiffTest_02(t *testing.T, alg *HashAlg) (string, string) {
 //	[+] test01 <->
 //	[+] test02 <->
 //	[+] test03 <->
-func prepareDirDiffTest_03(t *testing.T, alg *HashAlg) (string, string) {
+func prepareDirDiffTest_03(t *testing.T, alg *hashcore.HashAlg) (string, string) {
 	t.Helper()
 
 	meDir := t.TempDir()
@@ -255,7 +256,7 @@ func prepareDirDiffTest_03(t *testing.T, alg *HashAlg) (string, string) {
 //	[-]      <-> test01
 //	[-]      <-> test02
 //	[-]      <-> test03
-func prepareDirDiffTest_04(t *testing.T, alg *HashAlg) (string, string) {
+func prepareDirDiffTest_04(t *testing.T, alg *hashcore.HashAlg) (string, string) {
 	t.Helper()
 
 	meDir := t.TempDir()
@@ -278,7 +279,7 @@ func prepareDirDiffTest_04(t *testing.T, alg *HashAlg) (string, string) {
 //	[R] test0A <-> test01
 //	[R] test0B <-> test02
 //	[R] test0C <-> test03
-func prepareDirDiffTest_05(t *testing.T, alg *HashAlg) (string, string) {
+func prepareDirDiffTest_05(t *testing.T, alg *hashcore.HashAlg) (string, string) {
 	t.Helper()
 
 	meDir := t.TempDir()
@@ -315,7 +316,7 @@ func prepareDirDiffTest_05(t *testing.T, alg *HashAlg) (string, string) {
 //	[~] test04 <-> test04
 //	[+] test05 <->
 //	[-]        <-> test06
-func prepareDirDiffTest_06(t *testing.T, alg *HashAlg) (string, string) {
+func prepareDirDiffTest_06(t *testing.T, alg *hashcore.HashAlg) (string, string) {
 	t.Helper()
 
 	meDir := t.TempDir()

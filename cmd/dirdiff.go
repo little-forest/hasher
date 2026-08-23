@@ -18,9 +18,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/little-forest/hasher/common"   // nolint:staticcheck
-	. "github.com/little-forest/hasher/common" // nolint:staticcheck
-	"github.com/little-forest/hasher/core"
+	"github.com/little-forest/hasher/hashcore"
+	"github.com/little-forest/hasher/internal/hasher"
+	"github.com/little-forest/hasher/internal/term"
 	"github.com/morikuni/aec"
 	"github.com/spf13/cobra"
 )
@@ -72,25 +72,25 @@ func runDirDiff(cmd *cobra.Command, args []string) (int, error) {
 
 func dirDiff(basePath string, targetPath string, showOnlyDiff bool, verbose bool) (int, error) {
 	// diff
-	dirPairs, err := core.DirDiffRecursively(basePath, targetPath)
+	dirPairs, err := hasher.DirDiffRecursively(basePath, targetPath)
 	if err != nil {
-		common.ShowErrorMsg("dirdiff failed : %s", err.Error())
+		term.ShowErrorMsg("dirdiff failed : %s", err.Error())
 		return 1, nil
 	}
 
 	// display
 	for _, pair := range dirPairs {
 		switch pair.Status {
-		case core.BASE_ONLY:
-			fmt.Println(C_cyan.Apply(fmt.Sprintf("[+] %s", pair.Path())))
+		case hasher.BASE_ONLY:
+			fmt.Println(term.C_cyan.Apply(fmt.Sprintf("[+] %s", pair.Path())))
 			displayDir(pair.Base, showOnlyDiff)
-		case core.TARGET_ONLY:
-			fmt.Println(C_pink.Apply(fmt.Sprintf("[-] %s", pair.Path())))
+		case hasher.TARGET_ONLY:
+			fmt.Println(term.C_pink.Apply(fmt.Sprintf("[-] %s", pair.Path())))
 			displayDir(pair.Target, showOnlyDiff)
 		default:
 			// same
 			if pair.Base.IsAllSame() && !showOnlyDiff {
-				fmt.Println(C_gray.Apply(fmt.Sprintf("[=] %s", pair.Path())))
+				fmt.Println(term.C_gray.Apply(fmt.Sprintf("[=] %s", pair.Path())))
 			} else {
 				fmt.Printf("    %s\n", pair.Path())
 			}
@@ -102,23 +102,23 @@ func dirDiff(basePath string, targetPath string, showOnlyDiff bool, verbose bool
 	return 0, err
 }
 
-func displayDir(d *core.DirDiff, showOnlyDiff bool) {
+func displayDir(d *hasher.DirDiff, showOnlyDiff bool) {
 	for _, f := range d.GetSortedChildren() {
-		if showOnlyDiff && f.Status == core.SAME {
+		if showOnlyDiff && f.Status == hasher.SAME {
 			continue
 		}
 		col := getColorByStatus(f.Status)
 
 		msg := col.Apply(fmt.Sprintf("      %s %s", f.StatusMark(), f.Basename))
-		if f.Status == core.RENAMED {
-			msg += "  " + C_blue.Apply("<-->") + "  " + col.Apply(f.PairFileName)
+		if f.Status == hasher.RENAMED {
+			msg += "  " + term.C_blue.Apply("<-->") + "  " + col.Apply(f.PairFileName)
 		}
 		fmt.Println(msg)
 	}
 }
 
 func checkDirectory(path string) error {
-	isDir, err := IsDirectory(path)
+	isDir, err := hashcore.IsDirectory(path)
 	if err != nil {
 		return err
 	}
@@ -128,22 +128,22 @@ func checkDirectory(path string) error {
 	return nil
 }
 
-func getColorByStatus(s core.DiffStatus) aec.ANSI {
+func getColorByStatus(s hasher.DiffStatus) aec.ANSI {
 	switch s {
-	case core.ADDED:
-		return C_lime
-	case core.SAME:
-		return C_gray
-	case core.NOT_SAME_NEW:
-		return C_orange
-	case core.NOT_SAME_OLD:
-		return C_orange
-	case core.NOT_SAME:
-		return C_orange
-	case core.RENAMED:
-		return C_yellow
-	case core.REMOVED:
-		return C_pink
+	case hasher.ADDED:
+		return term.C_lime
+	case hasher.SAME:
+		return term.C_gray
+	case hasher.NOT_SAME_NEW:
+		return term.C_orange
+	case hasher.NOT_SAME_OLD:
+		return term.C_orange
+	case hasher.NOT_SAME:
+		return term.C_orange
+	case hasher.RENAMED:
+		return term.C_yellow
+	case hasher.REMOVED:
+		return term.C_pink
 	}
-	return C_default
+	return term.C_default
 }

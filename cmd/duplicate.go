@@ -18,8 +18,8 @@ package cmd
 import (
 	"fmt"
 
-	. "github.com/little-forest/hasher/common" // nolint:staticcheck
-	"github.com/little-forest/hasher/core"
+	"github.com/little-forest/hasher/hashcore"
+	"github.com/little-forest/hasher/internal/hasher"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +37,7 @@ const (
 )
 
 type checkDuplicationOption struct {
-	HashAlg             *core.HashAlg
+	HashAlg             *hashcore.HashAlg
 	Source              []string
 	Target              []string
 	ShowMode            int
@@ -103,7 +103,7 @@ func newCkeckDuplicationOption(cmd *cobra.Command, args []string) checkDuplicati
 	printZero, _ := cmd.Flags().GetBool(Flag_Duplication_PrintZero)
 
 	opt := checkDuplicationOption{
-		HashAlg:             core.NewDefaultHashAlg(),
+		HashAlg:             hashcore.NewDefaultHashAlg(),
 		PrintSourcePathOnly: printSourcePathOnly,
 		PrintZero:           printZero,
 		ShowMode:            showMode,
@@ -147,10 +147,10 @@ func runCheckDuplicated(cmd *cobra.Command, args []string) (int, error) {
 	return result, err
 }
 
-func loadHashData(srcPaths []string, alg *core.HashAlg) (*core.HashStore, error) {
-	store := core.NewHashStore()
+func loadHashData(srcPaths []string, alg *hashcore.HashAlg) (*hasher.HashStore, error) {
+	store := hasher.NewHashStore()
 	for _, p := range srcPaths {
-		isDir, err := IsDirectory(p)
+		isDir, err := hashcore.IsDirectory(p)
 		if err != nil {
 			return nil, err
 		}
@@ -170,7 +170,7 @@ func loadHashData(srcPaths []string, alg *core.HashAlg) (*core.HashStore, error)
 	return store, nil
 }
 
-func doCheckDuplication(src *core.HashStore, target *core.HashStore, opt checkDuplicationOption) (int, error) {
+func doCheckDuplication(src *hasher.HashStore, target *hasher.HashStore, opt checkDuplicationOption) (int, error) {
 	sep := "\n"
 	if opt.PrintZero {
 		sep = "\x00"
@@ -196,7 +196,7 @@ func doCheckDuplication(src *core.HashStore, target *core.HashStore, opt checkDu
 	return 0, nil
 }
 
-func makeResult(hash *core.Hash, sames []*core.Hash, printSourcePathOnly bool) string {
+func makeResult(hash *hashcore.Hash, sames []*hashcore.Hash, printSourcePathOnly bool) string {
 	if printSourcePathOnly {
 		return hash.Path
 	} else {

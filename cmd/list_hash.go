@@ -19,7 +19,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/little-forest/hasher/core"
+	"github.com/little-forest/hasher/hashcore"
+	"github.com/little-forest/hasher/internal/hasher"
 	"github.com/spf13/cobra"
 )
 
@@ -44,7 +45,7 @@ func init() {
 func runListHash(cmd *cobra.Command, args []string) (int, error) {
 	out, _ := cmd.Flags().GetString(Flag_ListHash_Out)
 	updateHash, _ := cmd.Flags().GetBool(Flag_ListHash_UpdateHash)
-	alg := core.NewDefaultHashAlg()
+	alg := hashcore.NewDefaultHashAlg()
 
 	err := listHashAll(args, alg, out, updateHash)
 	if err != nil {
@@ -54,7 +55,7 @@ func runListHash(cmd *cobra.Command, args []string) (int, error) {
 	}
 }
 
-func listHashAll(paths []string, alg *core.HashAlg, outPath string, updateHash bool) error {
+func listHashAll(paths []string, alg *hashcore.HashAlg, outPath string, updateHash bool) error {
 	verbose := false
 
 	var writer io.Writer
@@ -75,7 +76,7 @@ func listHashAll(paths []string, alg *core.HashAlg, outPath string, updateHash b
 		writer = os.Stdout
 	}
 
-	var notifier core.ProgressNotifier
+	var notifier hasher.ProgressNotifier
 
 	if verbose {
 		notifier = NewHasherProgressNotifier(1, verbose)
@@ -83,6 +84,6 @@ func listHashAll(paths []string, alg *core.HashAlg, outPath string, updateHash b
 		notifier = NewStdioProgressNotifier()
 	}
 
-	err := core.ListHash2(paths, core.NewDefaultHashAlg(), writer, notifier, verbose, updateHash)
+	err := hasher.ListHash2(paths, hashcore.NewDefaultHashAlg(), writer, notifier, verbose, updateHash)
 	return err
 }

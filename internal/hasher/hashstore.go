@@ -1,4 +1,4 @@
-package core
+package hasher
 
 import (
 	"encoding/csv"
@@ -11,23 +11,24 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/little-forest/hasher/hashcore"
 	"github.com/pkg/errors"
 )
 
 type HashStore struct {
-	store map[string][]*Hash
+	store map[string][]*hashcore.Hash
 	size  int
 }
 
 func NewHashStore() *HashStore {
-	return &HashStore{store: make(map[string][]*Hash)}
+	return &HashStore{store: make(map[string][]*hashcore.Hash)}
 }
 
-func (s *HashStore) Put(hash *Hash) {
+func (s *HashStore) Put(hash *hashcore.Hash) {
 	key := hash.String()
 
 	if s.store[key] == nil {
-		s.store[key] = []*Hash{hash}
+		s.store[key] = []*hashcore.Hash{hash}
 	} else {
 		s.store[key] = append(s.store[key], hash)
 	}
@@ -35,7 +36,7 @@ func (s *HashStore) Put(hash *Hash) {
 	s.size++
 }
 
-func (s HashStore) Get(hashValue string) []*Hash {
+func (s HashStore) Get(hashValue string) []*hashcore.Hash {
 	return s.store[hashValue]
 }
 
@@ -53,8 +54,8 @@ func (s HashStore) Size() int {
 	return s.size
 }
 
-func (s HashStore) Values() []*Hash {
-	values := make([]*Hash, s.size)
+func (s HashStore) Values() []*hashcore.Hash {
+	values := make([]*hashcore.Hash, s.size)
 
 	idx := 0
 	for k := range s.store {
@@ -104,7 +105,7 @@ func (s *HashStore) LoadHashData(path string) error {
 	return nil
 }
 
-func (s HashStore) parseHashLine(line []string) (*Hash, error) {
+func (s HashStore) parseHashLine(line []string) (*hashcore.Hash, error) {
 	if len(line) < 4 {
 		return nil, fmt.Errorf("invalid format : %v", line)
 	}
@@ -117,17 +118,17 @@ func (s HashStore) parseHashLine(line []string) (*Hash, error) {
 	if pos == -1 {
 		return nil, fmt.Errorf("invalid hash value format : %v", line)
 	}
-	alg := NewHashAlgFromString(line[3][0:pos])
+	alg := hashcore.NewHashAlgFromString(line[3][0:pos])
 	hashValue := line[3][pos+1:]
 
-	hash, err := NewHashFromString(line[0], alg, hashValue, int64(modTime))
+	hash, err := hashcore.NewHashFromString(line[0], alg, hashValue, int64(modTime))
 	if err != nil {
 		return nil, fmt.Errorf("failed to patse tsv : %v", line)
 	}
 	return hash, nil
 }
 
-func (s *HashStore) AppendHashDataFromDirectory(dirPath string, alg *HashAlg, verbose bool) error {
+func (s *HashStore) AppendHashDataFromDirectory(dirPath string, alg *hashcore.HashAlg, verbose bool) error {
 	err := filepath.WalkDir(dirPath, func(path string, info fs.DirEntry, e error) error {
 		if e != nil {
 			return errors.Wrap(e, "failed to filepath.Walk")

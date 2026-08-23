@@ -18,7 +18,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/little-forest/hasher/core"
+	"github.com/little-forest/hasher/hashcore"
 	"github.com/spf13/cobra"
 )
 
@@ -55,14 +55,14 @@ func runCompare(cmd *cobra.Command, args []string) (int, error) {
 Return true if given two failes have same hash value.
 */
 func compare(path1 string, path2 string) (bool, error) {
-	hashAlg := core.NewDefaultHashAlg()
+	hashAlg := hashcore.NewDefaultHashAlg()
 
-	_, hash1, err := core.UpdateHashStrictly(path1, hashAlg, false)
+	_, hash1, err := hashcore.UpdateHashStrictly(path1, hashAlg, false)
 	if err != nil {
 		return false, err
 	}
 
-	_, hash2, err := core.UpdateHashStrictly(path2, hashAlg, false)
+	_, hash2, err := hashcore.UpdateHashStrictly(path2, hashAlg, false)
 	if err != nil {
 		return false, err
 	}

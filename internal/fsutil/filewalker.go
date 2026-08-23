@@ -1,10 +1,11 @@
-package common
+package fsutil
 
 import (
 	"io/fs"
 	"os"
 	"path/filepath"
 
+	"github.com/little-forest/hasher/hashcore"
 	"github.com/pkg/errors"
 )
 
@@ -29,7 +30,7 @@ func WalkDir(dirPath string, dealFile func(file *os.File) error) error {
 		}
 
 		// don't follow symbolic link
-		isSymlink, err := IsSymbolicLink(path)
+		isSymlink, err := hashcore.IsSymbolicLink(path)
 		if err != nil {
 			return err
 		}
@@ -53,7 +54,7 @@ func WalkDir(dirPath string, dealFile func(file *os.File) error) error {
 func WalkDirs(dirPaths []string, dealFile func(file *os.File) error) error {
 	// check dirctories
 	for _, path := range dirPaths {
-		err := EnsureDirectory(path)
+		err := hashcore.EnsureDirectory(path)
 		if err != nil {
 			return err
 		}

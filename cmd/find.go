@@ -19,8 +19,10 @@ import (
 	"fmt"
 	"os"
 
-	. "github.com/little-forest/hasher/common" // nolint:staticcheck
-	"github.com/little-forest/hasher/core"
+	"github.com/little-forest/hasher/hashcore"
+	"github.com/little-forest/hasher/internal/fsutil"
+	"github.com/little-forest/hasher/internal/hasher"
+	"github.com/little-forest/hasher/internal/term"
 	"github.com/spf13/cobra"
 )
 
@@ -60,17 +62,17 @@ func runFind(cmd *cobra.Command, args []string) (int, error) {
 	findHasHash, _ := cmd.Flags().GetBool(Flag_Find_HasHash)
 	srcFile, _ := cmd.Flags().GetString(Flag_Find_File)
 
-	alg := core.NewDefaultHashAlg()
+	alg := hashcore.NewDefaultHashAlg()
 	if findNoHash {
 		w := &findNoHashWalker{Alg: alg}
-		if err := WalkDirsWithWalker(args, w); err != nil {
+		if err := fsutil.WalkDirsWithWalker(args, w); err != nil {
 			return 1, err
 		} else {
 			return 0, nil
 		}
 	} else if findHasHash {
 		w := &findHasHashWalker{Alg: alg}
-		if err := WalkDirsWithWalker(args, w); err != nil {
+		if err := fsutil.WalkDirsWithWalker(args, w); err != nil {
 			return 1, err
 		} else {
 			return 0, nil
@@ -86,11 +88,11 @@ func runFind(cmd *cobra.Command, args []string) (int, error) {
 }
 
 type findNoHashWalker struct {
-	Alg *core.HashAlg
+	Alg *hashcore.HashAlg
 }
 
 func (w findNoHashWalker) Deal(f *os.File) error {
-	hash, err := core.GetHash(f.Name(), w.Alg)
+	hash, err := hashcore.GetHash(f.Name(), w.Alg)
 	if err != nil {
 		return err
 	}
@@ -101,11 +103,11 @@ func (w findNoHashWalker) Deal(f *os.File) error {
 }
 
 type findHasHashWalker struct {
-	Alg *core.HashAlg
+	Alg *hashcore.HashAlg
 }
 
 func (w findHasHashWalker) Deal(f *os.File) error {
-	hash, err := core.GetHash(f.Name(), w.Alg)
+	hash, err := hashcore.GetHash(f.Name(), w.Alg)
 	if err != nil {
 		return err
 	}
@@ -116,14 +118,14 @@ func (w findHasHashWalker) Deal(f *os.File) error {
 }
 
 type findSameHashWalker struct {
-	Alg    *core.HashAlg
-	Source *core.Hash
+	Alg    *hashcore.HashAlg
+	Source *hashcore.Hash
 }
 
 func (w findSameHashWalker) Deal(f *os.File) error {
-	_, hash, err := core.UpdateHash(f.Name(), w.Alg, false)
+	_, hash, err := hasher.UpdateHash(f.Name(), w.Alg, false)
 	if err != nil {
-		ShowWarn("failed to update hash : %s", err.Error())
+		term.ShowWarn("failed to update hash : %s", err.Error())
 	}
 	if hash != nil && w.Source.HasSameHashValue(hash) {
 		fmt.Println(hash.Tsv())
@@ -131,15 +133,15 @@ func (w findSameHashWalker) Deal(f *os.File) error {
 	return nil
 }
 
-func findSameHashFile(alg *core.HashAlg, srcPath string, targetDirs []string) error {
-	if err := EnsureRegularFile(srcPath); err != nil {
+func findSameHashFile(alg *hashcore.HashAlg, srcPath string, targetDirs []string) error {
+	if err := hashcore.EnsureRegularFile(srcPath); err != nil {
 		return err
 	}
-	_, srcHash, err := core.UpdateHash(srcPath, alg, false)
+	_, srcHash, err := hasher.UpdateHash(srcPath, alg, false)
 	if err != nil {
 		return err
 	}
 
 	w := &findSameHashWalker{Alg: alg, Source: srcHash}
-	return WalkDirsWithWalker(targetDirs, w)
+	return fsutil.WalkDirsWithWalker(targetDirs, w)
 }

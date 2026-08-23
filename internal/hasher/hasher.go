@@ -1,4 +1,4 @@
-package core
+package hasher
 
 import (
 	"bufio"
@@ -8,162 +8,34 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
-	"time"
 
-	. "github.com/little-forest/hasher/common" // nolint:staticcheck
+	"github.com/little-forest/hasher/hashcore"
+	"github.com/little-forest/hasher/internal/fsutil"
+	"github.com/little-forest/hasher/internal/term"
 	"github.com/pkg/errors"
 )
 
-const hashBufSize = 256 * 1024
-
-const Xattr_prefix = "user.hasher"
-
-// File size when hash is updated
-const Xattr_size = Xattr_prefix + ".size"
-
-// File modification time when hash is updated
-const Xattr_modifiedTime = Xattr_prefix + ".mtime"
-
-// Time of hash update
-const Xattr_hashCheckedTime = Xattr_prefix + ".htime"
+// Err_updateError is a sentinel used with errors.As to detect an UpdateError.
+var Err_updateError = &hashcore.UpdateError{}
 
 // UpdateHashStictly updates specified file's hash value.
 // If the update of an attribute fails, a warning is displayed instead of returning an error.
 //
 //	changed : bool
-//	hash value : *Hash
+//	hash value : *hashcore.Hash
 //	error : error
-func UpdateHash(path string, alg *HashAlg, forceUpdate bool) (bool, *Hash, error) {
-	changed, hash, err := UpdateHashStrictly(path, alg, forceUpdate)
+func UpdateHash(path string, alg *hashcore.HashAlg, forceUpdate bool) (bool, *hashcore.Hash, error) {
+	changed, hash, err := hashcore.UpdateHashStrictly(path, alg, forceUpdate)
 	if err != nil {
 		if errors.As(err, Err_updateError) {
 			// Show warning and ignore error
-			ShowWarn("Failed to update attribute : %s", err.Error())
+			term.ShowWarn("Failed to update attribute : %s", err.Error())
 			return changed, hash, nil
 		} else {
 			return false, nil, err
 		}
 	}
 	return changed, hash, err
-}
-
-// UpdateHashStictly updates specified file's hash value.
-// Returns an UpdateError if the update of an attribute fails.
-//
-//	changed : bool
-//	hash value : *Hash
-//	error : error
-func UpdateHashStrictly(path string, alg *HashAlg, forceUpdate bool) (bool, *Hash, error) {
-	file, err := OpenFile(path)
-	if err != nil {
-		return false, nil, err
-	}
-	// nolint:errcheck
-	defer file.Close()
-
-	info, err := file.Stat()
-	if err != nil {
-		return false, nil, err
-	}
-	size := fmt.Sprint(info.Size())
-	modTime := strconv.FormatInt(info.ModTime().UnixNano(), 10)
-
-	var changed bool
-	curHash := GetXattr(file, alg.AttrName)
-	if curHash != "" {
-		// check if existing hash value is valid
-		// If the file size and modtime have not changed, it is considered correct.
-		if curSize := GetXattr(file, Xattr_size); size != curSize {
-			changed = true
-		} else if curMtime := GetXattr(file, Xattr_modifiedTime); modTime != curMtime {
-			changed = true
-		}
-		if !forceUpdate && !changed {
-			// update only checked time
-			err := updateHashCheckedTime(file) // nolint:govet
-			if err != nil {
-				err = NewUpdateError(err)
-			}
-			hash, _ := NewHashFromString(path, alg, curHash, info.ModTime().Unix())
-			return false, hash, err
-		}
-	}
-
-	// do calculate hash value
-	hash, err := CalcHash(path, alg)
-	if err != nil {
-		return false, nil, err
-	}
-
-	// update attributes
-	if err := SetXattr(file, alg.AttrName, hash.String()); err != nil {
-		return true, hash, NewUpdateError(err)
-	}
-	if err := updateHashCheckedTime(file); err != nil {
-		return true, hash, NewUpdateError(err)
-	}
-	if err := SetXattr(file, Xattr_size, size); err != nil {
-		return true, hash, NewUpdateError(err)
-	}
-	if err := SetXattr(file, Xattr_modifiedTime, modTime); err != nil {
-		return true, hash, NewUpdateError(err)
-	}
-
-	return true, hash, nil
-}
-
-func updateHashCheckedTime(f *os.File) error {
-	htime := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
-	if err := SetXattr(f, Xattr_hashCheckedTime, htime); err != nil {
-		return err
-	}
-	return nil
-}
-
-func CalcHash(path string, hashAlg *HashAlg) (*Hash, error) {
-	if !hashAlg.Alg.Available() {
-		return nil, fmt.Errorf("no implementation")
-	}
-
-	r, err := OpenFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	hash := hashAlg.Alg.New()
-	if _, err := io.CopyBuffer(hash, r, make([]byte, hashBufSize)); err != nil {
-		return nil, err
-	}
-
-	info, _ := os.Stat(path)
-
-	return NewHash(path, hashAlg, hash.Sum(nil), info.ModTime().Unix()), nil
-}
-
-// Get hash value.
-// This function will not check hash is updated.
-// When given file's hash has not been calculated, it will return nil.
-func GetHash(path string, alg *HashAlg) (*Hash, error) {
-	file, err := OpenFile(path)
-	if err != nil {
-		return nil, err
-	}
-	// nolint:errcheck
-	defer file.Close()
-
-	info, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
-
-	curHash := GetXattr(file, alg.AttrName)
-	if curHash != "" {
-		hash, _ := NewHashFromString(path, alg, curHash, info.ModTime().Unix())
-		return hash, nil
-	} else {
-		return nil, nil
-	}
 }
 
 type UpdateTask struct {
@@ -194,8 +66,8 @@ func NewUpdateResult(workerId int, task UpdateTask, hash string, message string,
 	}
 }
 
-func ConcurrentUpdateHash(paths []string, alg *HashAlg, numOfWorkers int, forceUpdate bool, notifier ProgressNotifier) error {
-	total := CountAllFiles(paths, notifier.IsVerbose())
+func ConcurrentUpdateHash(paths []string, alg *hashcore.HashAlg, numOfWorkers int, forceUpdate bool, notifier ProgressNotifier) error {
+	total := fsutil.CountAllFiles(paths, notifier.IsVerbose())
 
 	notifier.SetTotal(total)
 	notifier.Start()
@@ -240,7 +112,7 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 
 	for _, p := range paths {
 		// skip symbolic link
-		isSym, err := IsSymbolicLink(p)
+		isSym, err := hashcore.IsSymbolicLink(p)
 		if err != nil || isSym {
 			continue
 		}
@@ -265,7 +137,7 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 				return err
 			}
 			// skip symbolic link
-			isSym, err := IsSymbolicLink(p)
+			isSym, err := hashcore.IsSymbolicLink(p)
 			if err != nil {
 				return err
 			}
@@ -284,7 +156,7 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 	inputDone <- numFiles
 }
 
-func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResult, alg *HashAlg, forceUpdate bool, notifier ProgressNotifier) {
+func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResult, alg *hashcore.HashAlg, forceUpdate bool, notifier ProgressNotifier) {
 	for t := range tasks {
 		notifier.NotifyTaskStart(id, t.Path)
 		changed, hash, err := UpdateHash(t.Path, alg, forceUpdate)
@@ -293,12 +165,12 @@ func updateHashWorker(id int, tasks <-chan UpdateTask, results chan<- UpdateResu
 		if err == nil {
 			hashValue = hash.String()
 			if !changed {
-				msg = Mark_OK
+				msg = term.Mark_OK
 			} else {
 				msg = "[UPDATED]"
 			}
 		} else {
-			msg = Mark_Failed
+			msg = term.Mark_Failed
 			notifier.NotifyError(id, err.Error())
 		}
 		notifier.NotifyTaskDone(id, msg)
@@ -319,8 +191,8 @@ func adjustNumOfWorkers(numOfWorkers int, numOfCPU int) int {
 	return numOfWorkers
 }
 
-func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifier, verbose bool, noCheck bool) error {
-	total := CountAllFiles(dirPaths, watcher.IsVerbose())
+func ListHash(dirPaths []string, alg *hashcore.HashAlg, w io.Writer, watcher ProgressNotifier, verbose bool, noCheck bool) error {
+	total := fsutil.CountAllFiles(dirPaths, watcher.IsVerbose())
 
 	watcher.SetTotal(total)
 	watcher.Start()
@@ -345,14 +217,14 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressNoti
 				watcher.NotifyTaskStart(0, path)
 			}
 
-			var hash *Hash
+			var hash *hashcore.Hash
 			var changed bool
 			msg := ""
 			absPath, _ := filepath.Abs(path)
 			if !noCheck {
 				changed, hash, e = UpdateHash(absPath, alg, false)
 			} else {
-				hash, e = GetHash(absPath, alg)
+				hash, e = hashcore.GetHash(absPath, alg)
 			}
 			if e != nil {
 				fmt.Fprintf(os.Stderr, "Failed to update hash : %s (reason : %s)\n", absPath, e.Error())
@@ -385,7 +257,7 @@ func ListHash(dirPaths []string, alg *HashAlg, w io.Writer, watcher ProgressNoti
 	return err
 }
 
-func ListHash2(paths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifier, verbose bool, updateHash bool) error {
+func ListHash2(paths []string, alg *hashcore.HashAlg, w io.Writer, watcher ProgressNotifier, verbose bool, updateHash bool) error {
 	if verbose {
 		if watcher == nil || !updateHash {
 			return fmt.Errorf("parameter integrity error (may be bug!)")
@@ -394,7 +266,7 @@ func ListHash2(paths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifi
 
 	var total int
 	if verbose {
-		total = CountAllFiles(paths, watcher.IsVerbose())
+		total = fsutil.CountAllFiles(paths, watcher.IsVerbose())
 
 		watcher.SetTotal(total)
 		watcher.Start()
@@ -407,7 +279,7 @@ func ListHash2(paths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifi
 	count := 1
 	for _, p := range paths {
 
-		t, err := CheckFileType(p)
+		t, err := hashcore.CheckFileType(p)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to stat : %s", err.Error())
 			if verbose {
@@ -417,12 +289,12 @@ func ListHash2(paths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifi
 				watcher.NotifyProgress(count, total)
 				count++
 			} else {
-				ShowErrorMsg(errMsg)
+				term.ShowErrorMsg(errMsg)
 			}
 		}
 
 		switch t {
-		case RegularFile:
+		case hashcore.RegularFile:
 			watcher.NotifyTaskStart(0, p)
 			updated, err := listSingleFileHash(p, bw, updateHash, alg)
 			if err != nil {
@@ -431,8 +303,8 @@ func ListHash2(paths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifi
 			watcher.NotifyTaskDone(0, getUpdateMessage(updated, err))
 			watcher.NotifyProgress(count, total)
 			count++
-		case Directory:
-			err := WalkDir(p, func(f *os.File) error {
+		case hashcore.Directory:
+			err := fsutil.WalkDir(p, func(f *os.File) error {
 				watcher.NotifyTaskStart(0, f.Name())
 				updated, err := listSingleFileHash(f.Name(), bw, updateHash, alg)
 				if err != nil {
@@ -448,11 +320,11 @@ func ListHash2(paths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifi
 				if verbose {
 					watcher.NotifyError(0, errMsg)
 				} else {
-					ShowErrorMsg(errMsg)
+					term.ShowErrorMsg(errMsg)
 				}
 			}
 		default:
-			ShowWarn("Unsupported file type : %s", p)
+			term.ShowWarn("Unsupported file type : %s", p)
 		}
 	}
 
@@ -465,12 +337,12 @@ func ListHash2(paths []string, alg *HashAlg, w io.Writer, watcher ProgressNotifi
 
 func getUpdateMessage(updated bool, err error) string {
 	if err != nil {
-		return Mark_Error
+		return term.Mark_Error
 	}
 	if !updated {
-		return Mark_OK
+		return term.Mark_OK
 	} else {
-		return Mark_Updated
+		return term.Mark_Updated
 	}
 }
 
@@ -478,24 +350,24 @@ func getUpdateMessage(updated bool, err error) string {
 // path is representing a regular file path,
 // When update specified true, if the hash has not been computed,
 // calculate it and return true if it has been updated.
-func listSingleFileHash(path string, writer *bufio.Writer, update bool, alg *HashAlg) (bool, error) {
-	var hash *Hash
+func listSingleFileHash(path string, writer *bufio.Writer, update bool, alg *hashcore.HashAlg) (bool, error) {
+	var hash *hashcore.Hash
 	var changed bool
 	var e error
 	absPath, _ := filepath.Abs(path)
 	if update {
-		changed, hash, e = UpdateHashStrictly(absPath, alg, false)
+		changed, hash, e = hashcore.UpdateHashStrictly(absPath, alg, false)
 		if e != nil {
 			return false, fmt.Errorf("failed to update hash : %s", e.Error())
 		}
 	} else {
-		hash, e = GetHash(absPath, alg)
+		hash, e = hashcore.GetHash(absPath, alg)
 		if e != nil {
 			return false, fmt.Errorf("failed to get hash : %s", e.Error())
 		}
 		if hash == nil {
 			// no-update mode is not intended for ProgresWatcher
-			ShowWarn("The hash value has not yet been calculated. : %s", absPath)
+			term.ShowWarn("The hash value has not yet been calculated. : %s", absPath)
 			return false, nil
 		}
 	}
