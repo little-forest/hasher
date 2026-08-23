@@ -46,6 +46,6 @@ func versionString() string {
 }
 
 func runVersion(cmd *cobra.Command, args []string) error {
-	fmt.Fprint(cmd.OutOrStdout(), versionString())
+	fmt.Fprint(cmd.OutOrStdout(), versionString()) // nolint:errcheck // writing the version line cannot usefully fail
 	return nil
 }
