@@ -59,7 +59,8 @@ var checkDuplicationCmd = &cobra.Command{
   Instead of directories, you can also specify a TSV file output by the list-hash sub-command.
   Cannot use -s and -t options at the same time.
 `,
-	RunE: statusWrapper.RunE(runCheckDuplicated),
+	RunE:         runCheckDuplicated,
+	SilenceUsage: true,
 	Args: func(cmd *cobra.Command, args []string) error {
 		showExistsOnly, _ := cmd.Flags().GetBool(Flag_Duplication_ShowExistsOnly)
 		showMissingOnly, _ := cmd.Flags().GetBool(Flag_Duplication_ShowMissingOnly)
@@ -128,23 +129,22 @@ func newCkeckDuplicationOption(cmd *cobra.Command, args []string) checkDuplicati
 	return opt
 }
 
-func runCheckDuplicated(cmd *cobra.Command, args []string) (int, error) {
+func runCheckDuplicated(cmd *cobra.Command, args []string) error {
 	opt := newCkeckDuplicationOption(cmd, args)
 
 	// make source hash store
 	srcHashData, err := loadHashData(opt.Source, opt.HashAlg)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
 	// make target hash store
 	targetHashData, err := loadHashData(opt.Target, opt.HashAlg)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
-	result, err := doCheckDuplication(srcHashData, targetHashData, opt)
-	return result, err
+	return doCheckDuplication(srcHashData, targetHashData, opt)
 }
 
 func loadHashData(srcPaths []string, alg *hashcore.HashAlg) (*hasher.HashStore, error) {
@@ -170,7 +170,7 @@ func loadHashData(srcPaths []string, alg *hashcore.HashAlg) (*hasher.HashStore, 
 	return store, nil
 }
 
-func doCheckDuplication(src *hasher.HashStore, target *hasher.HashStore, opt checkDuplicationOption) (int, error) {
+func doCheckDuplication(src *hasher.HashStore, target *hasher.HashStore, opt checkDuplicationOption) error {
 	sep := "\n"
 	if opt.PrintZero {
 		sep = "\x00"
@@ -193,7 +193,7 @@ func doCheckDuplication(src *hasher.HashStore, target *hasher.HashStore, opt che
 			fmt.Print(sep)
 		}
 	}
-	return 0, nil
+	return nil
 }
 
 func makeResult(hash *hashcore.Hash, sames []*hashcore.Hash, printSourcePathOnly bool) string {

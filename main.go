@@ -16,11 +16,20 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	_ "crypto/sha1"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/little-forest/hasher/cmd"
 )
 
 func main() {
-	cmd.Execute()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := cmd.Execute(ctx); err != nil {
+		os.Exit(1)
+	}
 }

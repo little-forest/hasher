@@ -31,10 +31,11 @@ const Flag_Calc_NoShowPath = "no-show-path"
 
 // calcCmd represents the calc command
 var calcCmd = &cobra.Command{
-	Use:   "calc",
-	Short: "Calculate hash value and show",
-	Long:  ``,
-	RunE:  statusWrapper.RunE(runCalcHash),
+	Use:          "calc",
+	Short:        "Calculate hash value and show",
+	Long:         ``,
+	RunE:         runCalcHash,
+	SilenceUsage: true,
 }
 
 func init() {
@@ -43,7 +44,7 @@ func init() {
 	calcCmd.Flags().BoolP(Flag_Calc_NoShowPath, "n", false, "don't show path")
 }
 
-func runCalcHash(cmd *cobra.Command, args []string) (int, error) {
+func runCalcHash(cmd *cobra.Command, args []string) error {
 	for _, v := range args {
 		if isDir, _ := hashcore.IsDirectory(v); isDir {
 			// skip directory
@@ -65,5 +66,5 @@ func runCalcHash(cmd *cobra.Command, args []string) (int, error) {
 			fmt.Fprintf(os.Stdout, "%s\n", hash) // nolint:errcheck
 		}
 	}
-	return 0, nil
+	return nil
 }

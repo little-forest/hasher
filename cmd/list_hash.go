@@ -29,10 +29,11 @@ const Flag_ListHash_UpdateHash = "update-hash"
 
 // listHashCmd represents the listHash command
 var listHashCmd = &cobra.Command{
-	Use:   "list-hash [-u] [-o OUT_FILE] TARGET...",
-	Short: "Output hash list in TSV format",
-	Long:  ``,
-	RunE:  statusWrapper.RunE(runListHash),
+	Use:          "list-hash [-u] [-o OUT_FILE] TARGET...",
+	Short:        "Output hash list in TSV format",
+	Long:         ``,
+	RunE:         runListHash,
+	SilenceUsage: true,
 }
 
 func init() {
@@ -42,17 +43,12 @@ func init() {
 	listHashCmd.Flags().BoolP(Flag_ListHash_UpdateHash, "u", false, "When the hash is NOT up-to-date. Update it.")
 }
 
-func runListHash(cmd *cobra.Command, args []string) (int, error) {
+func runListHash(cmd *cobra.Command, args []string) error {
 	out, _ := cmd.Flags().GetString(Flag_ListHash_Out)
 	updateHash, _ := cmd.Flags().GetBool(Flag_ListHash_UpdateHash)
 	alg := hashcore.NewDefaultHashAlg()
 
-	err := listHashAll(args, alg, out, updateHash)
-	if err != nil {
-		return 1, err
-	} else {
-		return 0, nil
-	}
+	return listHashAll(args, alg, out, updateHash)
 }
 
 func listHashAll(paths []string, alg *hashcore.HashAlg, outPath string, updateHash bool) error {

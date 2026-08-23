@@ -30,7 +30,7 @@ const Flag_DirDiff_showOnlyDifferences = "show-only-differences"
 // dirdiffCmd represents the dirdiff command
 var dirdiffCmd = &cobra.Command{
 	Use:   "dirdiff BASE_DIR TARGET_DIR",
-	Args:  cobra.ExactArgs(2),
+	Args:  exactArgsOrSilent(2),
 	Short: "Recursively compares two directories and displays the differences.",
 	Long: `Recursively compares two directories and displays the differences.
 Each files are compared using hash values.
@@ -43,7 +43,9 @@ Each files are compared using hash values.
   [~] : different file (modtime is same)
   [R] : renamed file
 `,
-	RunE: statusWrapper.RunE(runDirDiff),
+	RunE:          runDirDiff,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 }
 
 func init() {
@@ -52,30 +54,30 @@ func init() {
 	dirdiffCmd.Flags().BoolP(Flag_DirDiff_showOnlyDifferences, "d", false, "Show only differences")
 }
 
-func runDirDiff(cmd *cobra.Command, args []string) (int, error) {
+func runDirDiff(cmd *cobra.Command, args []string) error {
 	path1 := args[0]
 	path2 := args[1]
 
 	if err := checkDirectory(path1); err != nil {
-		return 1, err
+		printErr(cmd, err)
+		return errSilent
 	}
 	if err := checkDirectory(path2); err != nil {
-		return 1, err
+		printErr(cmd, err)
+		return errSilent
 	}
 
 	showOnlyDiff, _ := cmd.Flags().GetBool(Flag_DirDiff_showOnlyDifferences)
 
-	status, err := dirDiff(path1, path2, showOnlyDiff, true)
-
-	return status, err
+	return dirDiff(path1, path2, showOnlyDiff, true)
 }
 
-func dirDiff(basePath string, targetPath string, showOnlyDiff bool, verbose bool) (int, error) {
+func dirDiff(basePath string, targetPath string, showOnlyDiff bool, verbose bool) error {
 	// diff
 	dirPairs, err := hasher.DirDiffRecursively(basePath, targetPath)
 	if err != nil {
 		term.ShowErrorMsg("dirdiff failed : %s", err.Error())
-		return 1, nil
+		return errSilent
 	}
 
 	// display
@@ -99,7 +101,7 @@ func dirDiff(basePath string, targetPath string, showOnlyDiff bool, verbose bool
 	}
 
 	// RESULT
-	return 0, err
+	return nil
 }
 
 func displayDir(d *hasher.DirDiff, showOnlyDiff bool) {

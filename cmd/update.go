@@ -28,10 +28,11 @@ const Flag_Update_ForceUpdate = "force-update"
 
 // updateCmd represents the update command
 var updateCmd = &cobra.Command{
-	Use:   "update",
-	Short: "Calculate file hash and save to extended attribute",
-	Long:  ``,
-	RunE:  statusWrapper.RunE(runUpdateHash),
+	Use:          "update",
+	Short:        "Calculate file hash and save to extended attribute",
+	Long:         ``,
+	RunE:         runUpdateHash,
+	SilenceUsage: true,
 }
 
 func init() {
@@ -40,57 +41,51 @@ func init() {
 	updateCmd.Flags().BoolP(Flag_Update_ForceUpdate, "f", false, "Force update")
 }
 
-func runUpdateHash(cmd *cobra.Command, args []string) (int, error) {
+func runUpdateHash(cmd *cobra.Command, args []string) error {
 	forceUpdate, _ := cmd.Flags().GetBool(Flag_Update_ForceUpdate)
 	verbose, _ := cmd.Flags().GetBool(Flag_root_Verbose)
 	recuesive, _ := cmd.Flags().GetBool(Flag_root_Recursive)
 
 	alg := hashcore.NewDefaultHashAlg()
 
-	status := 0
-	var errorStatus error
-
-	if !recuesive {
-		// normal update, file only
-		for _, p := range args {
-			isDir, err := hashcore.IsDirectory(p)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-				continue
-			}
-
-			if isDir {
-				// skip dir
-				fmt.Fprintf(os.Stderr, "Skip directory : %s\n", p)
-				continue
-			} else {
-				// update file
-				changed, hash, err := hasher.UpdateHash(p, alg, forceUpdate) // nolint:govet
-				if err == nil && verbose {
-					mark := ""
-					if changed {
-						mark = "*"
-					}
-					fmt.Fprintf(os.Stdout, "%s  %s %s\n", p, hash.String(), mark) // nolint:errcheck
-				}
-			}
-
-			if err != nil { // nolint:govet
-				fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-				errorStatus = err
-				status = 1
-				continue
-			}
-		}
-	} else {
+	if recuesive {
 		// recursive update, directory only
-		err := updateHashConcurrently(args, alg, forceUpdate, verbose)
+		return updateHashConcurrently(args, alg, forceUpdate, verbose)
+	}
+
+	// normal update, file only
+	var errResult error
+	for _, p := range args {
+		isDir, err := hashcore.IsDirectory(p)
 		if err != nil {
-			errorStatus = err
-			status = 1
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			errResult = err
+			continue
+		}
+
+		if isDir {
+			// skip dir
+			fmt.Fprintf(os.Stderr, "Skip directory : %s\n", p)
+			continue
+		}
+
+		// update file
+		changed, hash, err := hasher.UpdateHash(p, alg, forceUpdate)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			errResult = err
+			continue
+		}
+
+		if verbose {
+			mark := ""
+			if changed {
+				mark = "*"
+			}
+			fmt.Fprintf(os.Stdout, "%s  %s %s\n", p, hash.String(), mark) // nolint:errcheck
 		}
 	}
-	return status, errorStatus
+	return errResult
 }
 
 func updateHashConcurrently(dirPaths []string, alg *hashcore.HashAlg, forceUpdate bool, verbose bool) error {

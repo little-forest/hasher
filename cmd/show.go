@@ -30,24 +30,24 @@ import (
 
 // showCmd represents the show command
 var showCmd = &cobra.Command{
-	Use:   "show",
-	Short: "show extra attribute added by hasher",
-	Long:  ``,
-	RunE:  statusWrapper.RunE(runShow),
+	Use:          "show",
+	Short:        "show extra attribute added by hasher",
+	Long:         ``,
+	RunE:         runShow,
+	SilenceUsage: true,
 }
 
 func init() {
 	rootCmd.AddCommand(showCmd)
 }
 
-func runShow(cmd *cobra.Command, args []string) (int, error) {
+func runShow(cmd *cobra.Command, args []string) error {
 	recuesive, _ := cmd.Flags().GetBool(Flag_root_Recursive)
 
 	alg := hashcore.NewDefaultHashAlg()
 
 	showHeader()
 
-	status := 0
 	var errResult error
 	for _, p := range args {
 		isDir, err := hashcore.IsDirectory(p)
@@ -68,11 +68,10 @@ func runShow(cmd *cobra.Command, args []string) (int, error) {
 		}
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-			status = 1
 			errResult = err
 		}
 	}
-	return status, errResult
+	return errResult
 }
 
 func showAttributes(path string, hashAlg *hashcore.HashAlg) error {

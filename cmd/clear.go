@@ -31,21 +31,21 @@ import (
 
 // clearCmd represents the clear command
 var clearCmd = &cobra.Command{
-	Use:   "clear",
-	Short: "Clear hash attributes",
-	Long:  ``,
-	RunE:  statusWrapper.RunE(runClear),
+	Use:          "clear",
+	Short:        "Clear hash attributes",
+	Long:         ``,
+	RunE:         runClear,
+	SilenceUsage: true,
 }
 
 func init() {
 	rootCmd.AddCommand(clearCmd)
 }
 
-func runClear(cmd *cobra.Command, args []string) (int, error) {
+func runClear(cmd *cobra.Command, args []string) error {
 	verbose, _ := cmd.Flags().GetBool(Flag_root_Verbose)
 	recuesive, _ := cmd.Flags().GetBool(Flag_root_Recursive)
 
-	status := 0
 	var errResult error
 	for _, p := range args {
 		ftype, err := hashcore.CheckFileType(p)
@@ -70,11 +70,10 @@ func runClear(cmd *cobra.Command, args []string) (int, error) {
 		}
 		if err != nil {
 			term.ShowError(err)
-			status = 1
 			errResult = err
 		}
 	}
-	return status, errResult
+	return errResult
 }
 
 func clear(path string) error {

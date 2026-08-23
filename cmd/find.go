@@ -45,7 +45,8 @@ var findCmd = &cobra.Command{
   (3) Find files that have same hash value as given SRCFILE from directories
         hasher find -f SRCFILE DIR...
 `,
-	RunE: statusWrapper.RunE(runFind),
+	RunE:         runFind,
+	SilenceUsage: true,
 }
 
 func init() {
@@ -57,7 +58,7 @@ func init() {
 	findCmd.MarkFlagsMutuallyExclusive(Flag_Find_NoHash, Flag_Find_HasHash, Flag_Find_File)
 }
 
-func runFind(cmd *cobra.Command, args []string) (int, error) {
+func runFind(cmd *cobra.Command, args []string) error {
 	findNoHash, _ := cmd.Flags().GetBool(Flag_Find_NoHash)
 	findHasHash, _ := cmd.Flags().GetBool(Flag_Find_HasHash)
 	srcFile, _ := cmd.Flags().GetString(Flag_Find_File)
@@ -65,26 +66,14 @@ func runFind(cmd *cobra.Command, args []string) (int, error) {
 	alg := hashcore.NewDefaultHashAlg()
 	if findNoHash {
 		w := &findNoHashWalker{Alg: alg}
-		if err := fsutil.WalkDirsWithWalker(args, w); err != nil {
-			return 1, err
-		} else {
-			return 0, nil
-		}
+		return fsutil.WalkDirsWithWalker(args, w)
 	} else if findHasHash {
 		w := &findHasHashWalker{Alg: alg}
-		if err := fsutil.WalkDirsWithWalker(args, w); err != nil {
-			return 1, err
-		} else {
-			return 0, nil
-		}
+		return fsutil.WalkDirsWithWalker(args, w)
 	} else if srcFile != "" {
-		if err := findSameHashFile(alg, srcFile, args); err != nil {
-			return 1, err
-		} else {
-			return 0, nil
-		}
+		return findSameHashFile(alg, srcFile, args)
 	}
-	return 1, fmt.Errorf("invalid argument")
+	return fmt.Errorf("invalid argument")
 }
 
 type findNoHashWalker struct {

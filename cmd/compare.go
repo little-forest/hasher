@@ -24,31 +24,33 @@ import (
 
 // compareCmd represents the compare command
 var compareCmd = &cobra.Command{
-	Use:   "compare FILE1 FILE2",
-	Short: "Compare if two files are identical",
-	Long:  ``,
-	RunE:  statusWrapper.RunE(runCompare),
+	Use:           "compare FILE1 FILE2",
+	Short:         "Compare if two files are identical",
+	Long:          ``,
+	RunE:          runCompare,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 }
 
 func init() {
 	rootCmd.AddCommand(compareCmd)
 }
 
-func runCompare(cmd *cobra.Command, args []string) (int, error) {
+func runCompare(cmd *cobra.Command, args []string) error {
 	if len(args) < 2 {
-		return -1, fmt.Errorf("too few arguments")
+		printErr(cmd, fmt.Errorf("too few arguments"))
+		return errSilent
 	}
 
 	result, err := compare(args[0], args[1])
 	if err != nil {
-		return 1, nil
+		return errSilent
 	}
 
 	if result {
-		return 0, nil
-	} else {
-		return 1, nil
+		return nil
 	}
+	return errSilent
 }
 
 /*
