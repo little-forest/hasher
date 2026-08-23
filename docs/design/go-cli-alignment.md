@@ -2,7 +2,7 @@
 title: go-cli 準拠のレイアウトへの再編と hash/xattr のライブラリ公開
 created: 2026-08-23
 updated: 2026-08-23
-status: 実装中
+status: 実装済み
 ---
 
 # 要求

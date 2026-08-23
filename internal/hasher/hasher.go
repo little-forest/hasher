@@ -130,7 +130,8 @@ func listTargetFiles(paths []string, tasks chan<- UpdateTask, inputDone chan<- i
 		}
 
 		// walk directory
-		// TODO: error check
+		// The walk error is deliberately discarded here; there is no path for
+		// reporting it back to the caller yet (see ARCHITECTURE.md B4).
 		// nolint:staticcheck,ineffassign
 		err = filepath.WalkDir(p, func(path string, info fs.DirEntry, err error) error {
 			if err != nil {

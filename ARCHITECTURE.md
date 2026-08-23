@@ -4,30 +4,34 @@ hasher の**内部実装とその理由**を記述する文書。モジュール
 
 CLI の契約・出力形式・拡張属性の仕様といった**外から見える振る舞い**は [SPECS.md](./SPECS.md) が正典であり、本書では `SPEC-XXX-nnn` の ID で参照する。**同じ事実を両方には書かない。**
 
-記載内容は 2026-08-23 時点の `main`（`fbb7028`）に基づく。
+記載内容は 2026-08-23 時点の `refactor/go-cli-alignment` に基づく。
 
 ---
 
 ## 1. 全体像
 
-3 つのパッケージからなる。依存は一方向で、循環は無い。
+リポジトリルートがモジュールルート。依存は一方向で、循環は無い。
 
 ```
 main
- └─> cmd     … CLI 層。cobra によるコマンド定義、引数解釈、画面出力
-      ├─> core    … ハッシュ計算エンジン。xattr キャッシュ、並行処理、差分アルゴリズム
-      └─> common  … 共有ユーティリティ。ファイル種別判定、色定義、ディレクトリ走査
-           ^
-           └──── core も common に依存する
+ └─> cmd              … CLI 層。cobra によるコマンド定義、引数解釈、画面出力
+      └─> internal/hasher  … ワーカープール、TSV 出力、HashStore、差分アルゴリズム
+           ├─> hashcore         … ★公開ライブラリ。ハッシュ計算と xattr の読み書き
+           ├─> internal/term    … 色・マーク・診断メッセージ・カーソル制御
+           └─> internal/fsutil  … ディレクトリ走査、ファイル数カウント
 ```
 
 | パッケージ | 責務 | 依存先 |
 | --- | --- | --- |
-| `cmd` | ユーザーとの接点。フラグを解釈し、`core` を呼び、結果を描画する | `core`, `common` |
-| `core` | ハッシュに関する業務ロジック全般。画面出力の判断は持たず、進捗は抽象インタフェース経由で通知する | `common` |
-| `common` | どちらからも使う低レベルな道具 | （外部ライブラリのみ） |
+| `cmd` | ユーザーとの接点。フラグを解釈し、下位層を呼び、結果を描画する | `hashcore`, `internal/*` |
+| `hashcore` | ハッシュ計算と拡張属性の読み書き。**画面に何も書かない**。外部アプリへ公開する（`SPEC-LIB-001`） | `pkg/xattr` のみ |
+| `internal/hasher` | ハッシュを土台にした業務ロジック。画面出力の判断は持たず、進捗は抽象インタフェース経由で通知する | `hashcore`, `internal/term`, `internal/fsutil` |
+| `internal/term` | 端末への出力に関わる道具 | `morikuni/aec` |
+| `internal/fsutil` | ディレクトリ走査とファイル数カウント | `hashcore`, `internal/term` |
 
-`main.go` は極小で、`crypto/sha1` をブランクインポートして実装を登録し、`cmd.Execute()` を呼ぶだけ。
+`main.go` は極小で、`crypto/sha1` をブランクインポートして実装を登録し、`signal.NotifyContext` でシグナル context を張って `cmd.Execute(ctx)` を呼ぶ。`os.Exit` を呼ぶのはここだけ（課題 B15 も参照）。
+
+**`hashcore` は `internal/*` を一切 import しない。** これは外部利用者から見た依存を `pkg/xattr` 1 本に保つための制約であり、逆向き（`internal/*` → `hashcore`）だけを許す。
 
 ### 設計上の中心的な発想
 
@@ -39,56 +43,77 @@ main
 
 ## 2. パッケージ構成
 
-### `src/cmd/` — CLI 層
+### `cmd/` — CLI 層
 
 | ファイル | 役割 |
 | --- | --- |
-| `root.go` | ルートコマンド定義、永続フラグ、`Execute()` と終了コードの確定 |
-| `status_wrapper.go` | サブコマンドの `(int, error)` シグネチャを cobra の `RunE` に橋渡しする |
-| `calc.go` `update.go` `compare.go` `dirdiff.go` `duplicate.go` `find.go` `clear.go` `list_hash.go` `show.go` `version.go` | 各サブコマンドの実装 |
+| `root.go` | ルートコマンド定義、永続フラグ、`Execute(ctx) error` |
+| `errors.go` | `errSilent` センチネルと、`SilenceErrors` を付けたコマンドが自前でエラーを表示するための補助 |
+| `calc.go` `update.go` `compare.go` `dirdiff.go` `duplicate.go` `find.go` `clear.go` `list_hash.go` `show.go` `version.go` | 各サブコマンドの実装。1 コマンド 1 ファイル |
 | `hasher_progress_notifier.go` | ANSI カーソル制御による多段進捗表示 |
 | `stdio_progress_notifier.go` | 進捗を描画しない実装（エラー・警告のみ stderr へ） |
 
-### `src/core/` — ハッシュ計算エンジン
+### `hashcore/` — 公開ライブラリ
+
+外部アプリケーションが `go get` して使う唯一のパッケージ（`SPEC-LIB-001`）。
 
 | ファイル | 役割 |
 | --- | --- |
-| `hasher.go` | 中核。キャッシュ判定、ハッシュ計算、ワーカープール、ファイル列挙、TSV 出力 |
+| `hasher.go` | 属性名の定数、キャッシュ判定、ハッシュ計算（`UpdateHashStrictly` / `CalcHash` / `GetHash`） |
 | `hash.go` | `Hash` 型と各種文字列表現（TSV / JSON / 16進） |
 | `hashalg.go` | `crypto.Hash` の薄いラッパ。アルゴリズム名と属性名の対応 |
-| `hashstore.go` | ハッシュ値をキーにしたインメモリインデックス。TSV の読み込み |
 | `xattr.go` | 拡張属性の読み書き・列挙・削除 |
+| `update_error.go` | 「計算は成功したが属性の保存に失敗した」を表すエラー型 |
+| `fileinfo.go` | ファイル種別判定と `OpenFile` |
+
+**なぜ `OpenFile` / `CheckFileType` がここにあるのか。** これらは走査ユーティリティの一部に見えるが、`hashcore` の関数が直接必要とする。`internal/fsutil` 側に置くと `hashcore` → `internal/fsutil` → `internal/term` → `morikuni/aec` と芋づるで引き込まれ、公開ライブラリの依存グラフに色ライブラリと stderr への書き込みが混入してしまう。依存 1 本を守るため、純粋なファイル種別判定だけを `hashcore` 側に置いている。
+
+**属性名は `hashcore` というパッケージ名に追随しない。** `Xattr_prefix = "user.hasher"` はパッケージ構成と無関係なリテラルであり、変えると既存のキャッシュが全て無効になる（`SPEC-XATTR-001`〜`006`）。`hashcore/attrname_test.go` がこれを機械的に固定している。
+
+### `internal/hasher/` — ハッシュを土台にした業務ロジック
+
+| ファイル | 役割 |
+| --- | --- |
+| `hasher.go` | 警告表示を伴う `UpdateHash`、ワーカープール、ファイル列挙、TSV 出力 |
+| `hashstore.go` | ハッシュ値をキーにしたインメモリインデックス。TSV の読み込み |
 | `dirdiff.go` | ディレクトリ単位の差分、ツリー全体の再帰比較 |
 | `filediff.go` | ファイル単位の差分と `DiffStatus` |
 | `dirpair.go` | 比較対象ディレクトリの対 |
 | `progress_notifier.go` | 進捗通知インタフェース |
-| `update_error.go` | 「計算は成功したが属性の保存に失敗した」を表すエラー型 |
 
-### `src/common/` — 共有ユーティリティ
+`Err_updateError`（`errors.As` に渡すセンチネル）は唯一の利用者である `UpdateHash` と同じここに置く。公開してしまうと課題 B17 のデータ競合が公開 API の互換性の縛りになるため。
+
+### `internal/term/` — 端末出力
 
 | ファイル | 役割 |
 | --- | --- |
-| `common.go` | ファイル種別判定、色定数、メッセージ出力、ファイル数カウント、カーソル制御 |
+| `term.go` | 色定数、ステータスマーク、`ShowWarn` / `ShowError` / `ShowErrorMsg`、カーソル制御 |
+
+### `internal/fsutil/` — ファイルシステム走査
+
+| ファイル | 役割 |
+| --- | --- |
+| `fsutil.go` | `CleanPath`、ファイル数カウント |
 | `filewalker.go` | ディレクトリ走査の共通実装 |
 
 ### 外部依存
 
-| ライブラリ | 用途 |
-| --- | --- |
-| `spf13/cobra` | CLI フレームワーク |
-| `pkg/xattr` | 拡張属性の読み書き（ファイルディスクリプタ版 API を使用） |
-| `morikuni/aec` | ANSI エスケープシーケンスの生成（色・カーソル制御） |
-| `pkg/errors` | エラーのラップ |
-| `deckarep/golang-set/v2` | `dirdiff` のディレクトリ集合演算 |
-| `stretchr/testify` | テストのアサーション |
+| ライブラリ | 用途 | 使うパッケージ |
+| --- | --- | --- |
+| `pkg/xattr` | 拡張属性の読み書き（ファイルディスクリプタ版 API を使用） | `hashcore` |
+| `spf13/cobra` | CLI フレームワーク | `cmd` |
+| `morikuni/aec` | ANSI エスケープシーケンスの生成（色・カーソル制御） | `cmd`, `internal/term` |
+| `pkg/errors` | エラーのラップ | `internal/*` |
+| `deckarep/golang-set/v2` | `dirdiff` のディレクトリ集合演算 | `internal/hasher` |
+| `stretchr/testify` | テストのアサーション | テストのみ |
 
-`go.mod` は `go 1.21` を宣言しているが、CI とリリースは Go 1.26.6 でビルドしている。**この乖離は意図されたものか不明**（課題 B12）。
+`go list -deps ./hashcore` に `aec` / `golang-set` / `pkg/errors` / `internal/` が現れないことが、公開ライブラリの依存を 1 本に保てている証拠になる。
 
 ---
 
 ## 3. 中核データ型
 
-### `Hash` — `core/hash.go`
+### `Hash` — `hashcore/hash.go`
 
 ハッシュ計算の結果を表す値。
 
@@ -103,7 +128,7 @@ main
 
 出力表現は `String()`（16進）、`Tsv()`、`Json()` の 3 つ。書式は `SPEC-FMT-001` 〜 `SPEC-FMT-003`。
 
-### `HashAlg` — `core/hashalg.go`
+### `HashAlg` — `hashcore/hashalg.go`
 
 `crypto.Hash` に「アルゴリズム名」と「拡張属性名」を添えただけの薄いラッパ。
 
@@ -111,11 +136,11 @@ main
 
 アルゴリズム名は `crypto.Hash.String()` の結果からハイフンを除いて小文字化して得る（`SHA-1` → `sha1`）。名前の正規化を 1 箇所に閉じ込めるための処理。
 
-### `HashStore` — `core/hashstore.go`
+### `HashStore` — `internal/hasher/hashstore.go`
 
 **ハッシュ値の16進文字列をキー**、同じハッシュを持つ `Hash` のスライスを値とするマップ。重複検出（`SPEC-CLI-105`）のためのインデックスで、「同じ内容のファイルを引く」操作を O(1) にする。
 
-### `DirDiff` / `FileDiff` / `DirPair` — `core/dirdiff.go`, `filediff.go`, `dirpair.go`
+### `DirDiff` / `FileDiff` / `DirPair` — `internal/hasher/dirdiff.go`, `filediff.go`, `dirpair.go`
 
 差分比較のためのデータ構造。
 
@@ -135,22 +160,22 @@ main
 引数のディレクトリ
       │
       ▼
-[1] ファイル数の事前カウント        common.CountAllFiles
+[1] ファイル数の事前カウント        fsutil.CountAllFiles
       │                            進捗の分母を得るためだけに全走査する
       ▼
-[2] ワーカープール起動              core.ConcurrentUpdateHash
+[2] ワーカープール起動              hasher.ConcurrentUpdateHash
       │
       ├── 列挙 goroutine ──> tasks チャネル
       │
       └── ワーカー goroutine
               │
               ▼
-        [3] キャッシュ判定           core.UpdateHashStrictly
+        [3] キャッシュ判定           hashcore.UpdateHashStrictly
               │  属性を読み、size / mtime と突き合わせる
               │
               ├─ 有効 ──> htime だけ更新して保存値を返す
               │
-              └─ 無効 ──> [4] ハッシュ計算  core.CalcHash
+              └─ 無効 ──> [4] ハッシュ計算  hashcore.CalcHash
                                 │  256KiB のバッファで読みながら計算
                                 ▼
                           [5] 属性を書き込む
@@ -172,7 +197,7 @@ main
 
 ### 属性の読み取りはエラーを潰す
 
-属性の取得は、失敗しても**エラーを返さず空文字列を返す**設計になっている（`core/xattr.go`）。「属性が無い」と「属性が読めない」を区別せず、どちらも「キャッシュが無い」として扱う。
+属性の取得は、失敗しても**エラーを返さず空文字列を返す**設計になっている（`hashcore/xattr.go`）。「属性が無い」と「属性が読めない」を区別せず、どちらも「キャッシュが無い」として扱う。
 
 これは `SPEC-OVERVIEW-003` の「非対応ファイルシステムでも動く」を成立させるための判断である。xattr に対応しないファイルシステム上では属性の取得が常に失敗するが、この設計により**エラーを一切出さずに、単に毎回再計算するツール**として振る舞う。
 
@@ -198,7 +223,7 @@ main
 
 ### チャネル構成
 
-`ConcurrentUpdateHash`（`core/hasher.go`）は 3 本のチャネルで構成される。
+`ConcurrentUpdateHash`（`internal/hasher/hasher.go`）は 3 本のチャネルで構成される。
 
 | チャネル | バッファ | 役割 |
 | --- | --- | --- |
@@ -229,15 +254,15 @@ main
 
 ## 7. 進捗通知の抽象化
 
-`core` は画面に何をどう出すかを知らない。処理の節目を `ProgressNotifier` インタフェースに通知するだけで、描画は `cmd` 側の実装が担う。
+`internal/hasher` は画面に何をどう出すかを知らない。処理の節目を `ProgressNotifier` インタフェースに通知するだけで、描画は `cmd` 側の実装が担う。
 
 ```
-core.ProgressNotifier （インタフェース）
+hasher.ProgressNotifier （インタフェース）
    ├── cmd.HasherProgressNotifier   … ANSI カーソル制御で多段表示
    └── cmd.StdioProgressNotifier    … 描画しない（エラー・警告のみ stderr）
 ```
 
-この分離により、`core` は verbose かどうかを判断せずに済み、テストではモックを差し込める。
+この分離により、`internal/hasher` は verbose かどうかを判断せずに済み、テストではモックを差し込める。
 
 ### `HasherProgressNotifier`
 
@@ -314,7 +339,11 @@ verbose でない場合、描画メソッドはすべて即座に return する�
 
 `ConcurrentUpdateHash` はワーカーの結果を受け取るものの、**エラーを読まずに捨てている**。失敗は `ProgressNotifier` 経由で画面に出るだけで、戻り値には反映されない（課題 B4）。
 
-`cmd` 層では、サブコマンドが `(int, error)` を返し、`status_wrapper.go` が cobra に橋渡しする。エラーを返すか異常ステータスを返すかで画面が変わる仕組み（`SPEC-CLI-002`）は、この橋渡しの実装に由来する。両者の使い分けに一貫した方針は無く、コマンドごとにばらついている。
+`cmd` 層では、全サブコマンドが cobra の `RunE`（`func(*cobra.Command, []string) error`）で統一され、`SilenceUsage: true` を持つ。失敗の経路が 1 本になり、`SPEC-CLI-002` の終了コードは「error を返したか否か」だけで決まる。
+
+例外は「終了コードだけで結果を伝える」2 箇所である。`compare` の差分検出と `dirdiff` の走査失敗は、**メッセージを出さない番兵エラー `errSilent`（`cmd/errors.go`）** を返し、両コマンドは `SilenceErrors: true` を持つ。こうしないと `compare` が差分を見つけるたびに `Error: ...` を出してしまい、「何も出力しない」という契約（`SPEC-CLI-103`）が壊れる。
+
+`SilenceErrors` は本物のエラーの表示も止めてしまうため、この 2 コマンドは引数不足・ディレクトリでないパスといった実エラーを `printErr`（cobra と同じ体裁）で自分で表示してから `errSilent` を返す。`dirdiff` の引数個数チェックも同じ理由で `exactArgsOrSilent` を経由する。
 
 ---
 
@@ -324,9 +353,9 @@ verbose でない場合、描画メソッドはすべて即座に return する�
 
 | 系統 | 場所 | 再帰 | シンボリックリンク | 権限エラー |
 | --- | --- | --- | --- | --- |
-| 共通実装 | `common/filewalker.go` | ○ | スキップする | 走査全体を中断 |
-| 個別実装 | `core/hasher.go` の列挙処理 | ○ | **スキップできていない**（B3） | 戻り値を破棄 |
-| 1 階層のみ | `core/dirdiff.go` の `DirDiff` 構築 | **×** | スキップする | エラーを返す |
+| 共通実装 | `internal/fsutil/filewalker.go` | ○ | スキップする | 走査全体を中断 |
+| 個別実装 | `internal/hasher/hasher.go` の列挙処理 | ○ | **スキップできていない**（B3） | 戻り値を破棄 |
+| 1 階層のみ | `internal/hasher/dirdiff.go` の `DirDiff` 構築 | **×** | スキップする | エラーを返す |
 
 共通実装を使っているのは `find` と一部の経路だけで、他の 6 箇所は標準ライブラリの走査を直接呼んでいる。
 
@@ -338,57 +367,66 @@ verbose でない場合、描画メソッドはすべて即座に return する�
 
 ## 11. 既知の実装上の課題
 
-現行実装で確認された不具合・不整合。**いずれも未修正**で、本書の作成時点では意図的に手を付けていない。`SPECS.md` の該当箇所からも参照されている。
+現行実装で確認された不具合・不整合。**いずれも未修正**である。`SPECS.md` の該当箇所からも参照されている。
+
+番号は削除しても再利用しない。B1（`update` の握り潰し）と B12（`go.mod` の Go バージョン乖離）はレイアウト再編に伴って解消したため、表から落としてある。
 
 ### 動作に影響するもの
 
 | # | 内容 | 位置 |
 | --- | --- | --- |
-| **B1** | `update`（非再帰）で `err` が内側スコープに再宣言され、更新結果のエラーが外側の判定に届かない。**失敗しても終了コード 0・メッセージ無しになる。** `// nolint:govet` が 2 箇所に付いており、静的解析の警告を抑止した形跡がある | `cmd/update.go:68,78` |
-| **B2** | ファイル種別判定がリンクを追跡する `os.Stat` を使っているため、シンボリックリンクとして判定される経路が実質的に存在しない。リンクを追跡しない `os.Lstat` はリポジトリ内で一度も使われていない | `common/common.go:73` |
-| **B3** | ファイル列挙でのリンク判定が、走査中のエントリではなく**走査ルートのパス**を評価している。配下のリンクが素通りする | `core/hasher.go:268` |
-| **B4** | `ConcurrentUpdateHash` が `tasks` チャネルを閉じないためワーカー goroutine が終了せずリークする。また結果チャネルの値を捨てているためエラーが集約されず、戻り値が常に `nil` になる | `core/hasher.go:205-306, 222` |
-| **B5** | TSV のパースに失敗した行でも、`nil` のまま格納処理に渡すため nil 参照で panic しうる | `core/hashstore.go:96-101` |
-| **B6** | `compare` がエラーを握りつぶし、「内容が違う」と「読めない」が区別できない（`SPEC-CLI-103`） | `cmd/compare.go:43-45` |
-| **B7** | 進捗表示の実装に警告イベントの分岐が無く、警告を通知すると `Unknown event` として赤字で表示される。なお `core` から警告を通知する箇所は現状無いため顕在化していない | `cmd/hasher_progress_notifier.go:171-183` |
-| **B11** | `dirdiff` でルート直下のファイルが比較対象から漏れる。相対パスが空文字列になるルート自身を集合から除外しているため（第 8 節、`SPEC-CLI-104`） | `core/dirdiff.go:254-271` |
+| **B2** | ファイル種別判定がリンクを追跡する `os.Stat` を使っているため、シンボリックリンクとして判定される経路が実質的に存在しない。リンクを追跡しない `os.Lstat` はリポジトリ内で一度も使われていない | `hashcore/fileinfo.go:33` |
+| **B3** | ファイル列挙でのリンク判定が、走査中のエントリではなく**走査ルートのパス**を評価している。配下のリンクが素通りする | `internal/hasher/hasher.go:140` |
+| **B4** | `ConcurrentUpdateHash` が `tasks` チャネルを閉じないためワーカー goroutine が終了せずリークする。また結果チャネルの値を捨てているためエラーが集約されず、戻り値が常に `nil` になる | `internal/hasher/hasher.go:69-178, 94` |
+| **B5** | TSV のパースに失敗した行でも、`nil` のまま格納処理に渡すため nil 参照で panic しうる | `internal/hasher/hashstore.go:97-105` |
+| **B6** | `compare` がエラーを握りつぶし、「内容が違う」と「読めない」が区別できない（`SPEC-CLI-103`） | `cmd/compare.go:46-47` |
+| **B7** | 進捗表示の実装に警告イベントの分岐が無く、警告を通知すると `Unknown event` として赤字で表示される。なお `internal/hasher` から警告を通知する箇所は現状無いため顕在化していない | `cmd/hasher_progress_notifier.go:170-182` |
+| **B11** | `dirdiff` でルート直下のファイルが比較対象から漏れる。相対パスが空文字列になるルート自身を集合から除外しているため（第 8 節、`SPEC-CLI-104`） | `internal/hasher/dirdiff.go:255-272` |
 
 ### 表記・整合性の問題
 
 | # | 内容 | 位置 |
 | --- | --- | --- |
-| **B8** | 更新マークが定数 `Mark_Updated`（`[UPDATE]`・緑）ではなくリテラル `"[UPDATED]"`（無色）で書かれており、コマンド間で表記が揃わない（`SPEC-OUT-001`）。同様に警告が `[WARN]` と `[WARNING]` で揺れている | `core/hasher.go:298`, `common/common.go:203` |
-| **B9** | TSV 形式を説明するコメントが列 4 を「sha1 hash」としているが、実装は `{アルゴリズム}:{16進}` を出力する（`SPEC-FMT-001`） | `core/hash.go:9-16` |
+| **B8** | 更新マークが定数 `Mark_Updated`（`[UPDATE]`・緑）ではなくリテラル `"[UPDATED]"`（無色）で書かれており、コマンド間で表記が揃わない（`SPEC-OUT-001`）。同様に警告が `[WARN]` と `[WARNING]` で揺れている | `internal/hasher/hasher.go:170,243`, `internal/fsutil/fsutil.go:76` |
+| **B9** | TSV 形式を説明するコメントが列 4 を「sha1 hash」としているが、実装は `{アルゴリズム}:{16進}` を出力する（`SPEC-FMT-001`） | `hashcore/hash.go:9-16` |
 | **B10** | `README.md` のダウンロード URL とリリース成果物名が一致しない（`SPEC-OVERVIEW-002`） | `README.md`, `.goreleaser.yml` |
-| **B12** | `go.mod` の Go バージョン宣言（1.21）と CI・リリースでの使用バージョン（1.26.6）が乖離している | `src/go.mod`, `.github/workflows/` |
 
 ### 設計上の未完成箇所
 
 | # | 内容 | 位置 |
 | --- | --- | --- |
-| **B13** | 進捗の分母を得るための事前カウントが、非表示時にも実行される（第 4 節） | `core/hasher.go`, `common/common.go` |
-| **B14** | ワーカー数調整のロジックがあるが、呼び出し側が 1 を固定で渡すため機能していない（`SPEC-LIMIT-005`、第 6 節） | `cmd/update.go:97` |
-| **B15** | 中断のための仕組み（`context.Context`・シグナル処理）が無い（`SPEC-LIMIT-004`） | 全体 |
-| **B16** | 出力先が端末かの判定が無く、色の抑止手段も無い（`SPEC-LIMIT-003`） | `common/common.go` |
-| **B17** | エラー型の判定に**パッケージ共有のグローバル変数**を判定先として渡しており、並行実行時にデータ競合になりうる | `core/hasher.go:40`, `core/update_error.go:21` |
-| **B18** | `Json()` がエスケープ無しの文字列組み立てで、かつ未使用（`SPEC-FMT-002`） | `core/hash.go:52` |
+| **B13** | 進捗の分母を得るための事前カウントが、非表示時にも実行される（第 4 節） | `internal/hasher/hasher.go`, `internal/fsutil/fsutil.go` |
+| **B14** | ワーカー数調整のロジックがあるが、呼び出し側が 1 を固定で渡すため機能していない（`SPEC-LIMIT-005`、第 6 節） | `cmd/update.go:90` |
+| **B15** | シグナル context は `main.go` で張られ `cmd.Execute(ctx)` まで渡っているが、**下位層は context を受け取らない**ため中断は実効化されていない。`SIGINT` / `SIGTERM` を受けると `main` がプロセスを即座に終了させるだけで、書きかけの属性は巻き戻らない（`SPEC-LIMIT-004`） | `main.go`, `cmd/root.go` |
+| **B16** | 出力先が端末かの判定が無く、色の抑止手段も無い（`SPEC-LIMIT-003`） | `internal/term/term.go` |
+| **B17** | エラー型の判定に**パッケージ共有のグローバル変数**を判定先として渡しており、並行実行時にデータ競合になりうる。`internal/hasher` に閉じているため公開 API（`SPEC-LIB-001`）には露出しておらず、互換性を気にせず直せる | `internal/hasher/hasher.go:19,30` |
+| **B18** | `Json()` がエスケープ無しの文字列組み立てで、CLI からは未使用（`SPEC-FMT-002`）。ただし `hashcore` の公開 API には含まれるため、安定版のタグを打つ前に片付ける必要がある | `hashcore/hash.go:52` |
 
 ---
 
 ## 12. テストの現状
 
-テストは `core` パッケージのみに存在し、`cmd` と `common` にはテストが無い。
+テストは `hashcore` / `internal/hasher` / `cmd` の 3 パッケージにある。`internal/term` と `internal/fsutil` にはテストが無い。
 
 | ファイル | 対象 |
 | --- | --- |
-| `hasher_test.go` | ハッシュ計算と更新の基本動作 |
-| `filediff_test.go` | `FileDiff` の生成 |
-| `dirdiff_test.go` | `DirDiff.Compare` の 6 シナリオ（全ステータスを網羅） |
-| `helper_test.go` | テスト用のダミーファイル生成・更新時刻操作ヘルパ |
+| `hashcore/hasher_test.go` | `CalcHash` の成功・失敗 |
+| `hashcore/attrname_test.go` | **拡張属性名とアルゴリズム名の固定**（`SPEC-XATTR-001`〜`006` / `SPEC-LIB-001`） |
+| `hashcore/helper_test.go` | ダミーファイル生成ヘルパ |
+| `internal/hasher/hasher_test.go` | `UpdateHash` の基本動作 |
+| `internal/hasher/filediff_test.go` | `FileDiff` の生成 |
+| `internal/hasher/dirdiff_test.go` | `DirDiff.Compare` の 6 シナリオ（全ステータスを網羅） |
+| `internal/hasher/helper_test.go` | テスト用のダミーファイル生成・更新時刻操作ヘルパ |
+| `cmd/update_test.go` | `update`（非再帰）が失敗時に error を返し、Usage を出さないこと（旧 B1 の回帰テスト） |
+| `cmd/version_test.go` | `version` の出力書式（`SPEC-CLI-110`） |
 
 **差分アルゴリズムの検証が最も厚い。** `dirdiff_test.go` は同一・追加・削除・リネーム・新旧の相違を組み合わせた 6 パターンを持ち、各シナリオの期待結果がコメント図で示されている。
 
 ヘルパにはファイルのコピー後に**更新時刻を元ファイルに合わせる処理**があり、これが「同一」判定を成立させる前提になっている。差分判定が更新時刻に依存するため、テストの再現性にはこの操作が不可欠。
+
+`attrname_test.go` はパッケージ名の変更が属性名に漏れることを防ぐためだけに置かれている。`hashcore` が公開ライブラリになった以上、属性名は Go の識別子とは独立した外部契約であり、リファクタリングで一緒に動いてはならない。
+
+`cmd` のテストはグローバルな `rootCmd` を共有するため、`SetArgs` / `SetOut` / `SetErr` を `t.Cleanup` で必ず戻す。
 
 ### 検証されていない領域
 
@@ -396,12 +434,12 @@ verbose でない場合、描画メソッドはすべて即座に return する�
 - `HashStore` と TSV のパース — 課題 B5 が該当
 - ワーカープールとワーカー数調整 — 課題 B4 / B14 が該当
 - TSV / JSON の出力書式
-- 拡張属性の読み書き
-- CLI 層すべて — 課題 B1 / B6 が該当
+- 拡張属性の読み書きそのもの（属性「名」は固定してあるが、値の往復は未検証）
+- `compare` / `dirdiff` / `clear` / `show` / `find` / `list-hash` / `duplicate` の CLI 層 — 課題 B6 が該当
 
-**課題 B1・B4・B5・B11 がいずれも未テスト領域で起きている**点は、テストの手薄な箇所と不具合の分布が一致していることを示している。
+**課題 B4・B5・B11 がいずれも未テスト領域で起きている**点は、テストの手薄な箇所と不具合の分布が一致していることを示している。旧 B1 も同じ理由で見逃されていたため、修正と同時に `cmd/update_test.go` を追加した。
 
-`hasher_test.go` には拡張属性の保存を検証するコードがコメントアウトされて残っている。ファイルシステムが xattr に対応しない環境（RAM ディスクなど）でのテスト失敗を避けるための措置と思われる。
+`internal/hasher/hasher_test.go` には拡張属性の保存を検証するコードがコメントアウトされて残っている。ファイルシステムが xattr に対応しない環境（RAM ディスクなど）でのテスト失敗を避けるための措置と思われる。
 
 ---
 
@@ -412,15 +450,20 @@ verbose でない場合、描画メソッドはすべて即座に return する�
 GoReleaser でクロスコンパイルする。対象と成果物名は `SPEC-OVERVIEW-002`。
 
 - **CGO は無効**。依存する外部ライブラリがすべて純 Go であるため静的バイナリにできる。
-- バージョン情報（`SPEC-CLI-110` の 4 項目）は `-ldflags -X` で `cmd` パッケージの変数に埋め込む。`main.go` はこれに関与しない。
+- バージョン情報（`SPEC-CLI-110` の 4 項目）は `-ldflags -X` で `cmd` パッケージの変数に埋め込む。`main.go` はこれに関与しない。モジュールルートがリポジトリルートなので、`-X` のパスは `github.com/little-forest/hasher/cmd.<変数>` になる。
 - 再現ビルドのためコミット日時をタイムスタンプに使う。
 
-ローカルでのビルド確認:
+タスクランナーは [go-task](https://taskfile.dev/)。`Taskfile.yml` が入口になる。
 
 ```bash
-cd src
-goreleaser build -f ../.goreleaser.yml --clean --snapshot
+task build             # 現在のプラットフォームのみ。dist 配下のバイナリへ ./hasher を張る
+task build-all         # 全プラットフォーム
+task release-snapshot  # publish なしのスナップショットリリース
+task test
+task lint
 ```
+
+`task build` が作る `./hasher` シンボリックリンクと `dist/` は `.gitignore` 済み。`-X` の注入が生きているかは、ビルド後に `./hasher version` がバージョンを `dev` 以外で返すかで確認できる。
 
 ### CI
 
@@ -432,16 +475,17 @@ goreleaser build -f ../.goreleaser.yml --clean --snapshot
 
 CI は単一環境（Linux）でのみ実行され、クロスコンパイルの検証やカバレッジ収集は行っていない。
 
-CI の起動条件が `src/` 配下・ワークフロー・`aqua.yaml` の変更に限定されているため、**`.goreleaser.yml` を壊す変更は PR の時点で検出されない**。リリース設定の破壊はタグを打った時に初めて分かる。
+起動条件のパスフィルタには `.goreleaser.yml` と `Taskfile.yml` が含まれるため、**リリース設定を壊す変更は PR の時点で検出される**。
 
 ### 開発ツール
 
+- **aqua** — CLI ツールのバージョン管理。Go コンパイラ本体・GoReleaser・Task を `aqua.yaml` で固定する。Go のバージョンは CI の `setup-go` と同じものを指す。
 - **pre-commit** — コミット前に `go fmt`・`go mod tidy`・`golangci-lint` を実行する。
-- **golangci-lint** — `govet`・`errcheck`・`staticcheck`・`misspell` を有効化。`unused` は無効。`govet` は全チェックを有効にしているため、課題 B1 の変数取り違えは検出されうる状態にあった（`nolint` で抑止されている）。
-- **aqua** — CLI ツールのバージョン管理。
+- **golangci-lint** — `govet`・`errcheck`・`staticcheck`・`misspell` を有効化。`unused` は無効。`govet` は全チェックを有効にしているため、変数の取り違え（旧 B1）は検出されうる状態にあった（当時は `nolint` で抑止されていた）。
 - **Renovate** — 依存関係の更新。
 
 ```bash
-pre-commit run -a          # 全ファイルをチェック
-cd src && go test ./...    # テスト実行
+aqua i -l          # 開発ツールを導入
+pre-commit run -a  # 全ファイルをチェック
+task test          # テスト実行
 ```
