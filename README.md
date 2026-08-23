@@ -15,8 +15,7 @@ curl -sLo - https://github.com/little-forest/hasher/releases/download/${HASHER_V
 ## Local build
 
 ```
-cd src
-goreleaser build -f ../.goreleaser.yml --clean --snapshot
+goreleaser build --clean --snapshot
 ```
 
 ## pre-commit
@@ -48,6 +47,5 @@ go install github.com/spf13/cobra-cli@latest
 Make sub-command template.
 
 ```
-cd src
 cobra-cli add [SUB_COMMNAD_NAME]
 ```

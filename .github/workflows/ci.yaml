@@ -5,15 +5,25 @@ on:
    branches:
      - 'main'
    paths:
-     - src/**
-     - .github/workflows/**
+     - '**/*.go'
+     - 'go.mod'
+     - 'go.sum'
+     - '.golangci.yaml'
+     - '.goreleaser.yml'
+     - 'Taskfile.yml'
      - 'aqua.yaml'
+     - .github/workflows/**
 
  pull_request:
    paths:
-     - src/**
-     - .github/workflows/**
+     - '**/*.go'
+     - 'go.mod'
+     - 'go.sum'
+     - '.golangci.yaml'
+     - '.goreleaser.yml'
+     - 'Taskfile.yml'
      - 'aqua.yaml'
+     - .github/workflows/**
 
 jobs:
   build_and_test:
@@ -33,13 +43,9 @@ jobs:
 
       - name: Run GoLangCI-Lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
-        with:
-          working-directory: ./src
 
       - name: Build 
         run: go build
-        working-directory: ./src
- 
+
       - name: Test
         run: go test -v ./...
-        working-directory: ./src
