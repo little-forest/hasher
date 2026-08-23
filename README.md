@@ -14,8 +14,14 @@ curl -sLo - https://github.com/little-forest/hasher/releases/download/${HASHER_V
 
 ## Local build
 
+Development tools (Go, GoReleaser, Task) are pinned in `aqua.yaml`.
+Install [aqua](https://aquaproj.github.io/), run `aqua i -l`, then:
+
 ```
-goreleaser build --clean --snapshot
+task build          # current platform only, symlinks ./hasher
+task build-all      # all platforms
+task test
+task lint
 ```
 
 ## pre-commit
