@@ -25,7 +25,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Flag_DirDiff_showOnlyDifferences = "show-only-differences"
+const Flag_dirdiff_ShowOnlyDifferences = "show-only-differences"
+
+var dirdiffShowOnlyDifferences bool
 
 // dirdiffCmd represents the dirdiff command
 var dirdiffCmd = &cobra.Command{
@@ -51,7 +53,7 @@ Each files are compared using hash values.
 func init() {
 	rootCmd.AddCommand(dirdiffCmd)
 
-	dirdiffCmd.Flags().BoolP(Flag_DirDiff_showOnlyDifferences, "d", false, "Show only differences")
+	dirdiffCmd.Flags().BoolVarP(&dirdiffShowOnlyDifferences, Flag_dirdiff_ShowOnlyDifferences, "d", false, "Show only differences")
 }
 
 func runDirDiff(cmd *cobra.Command, args []string) error {
@@ -67,9 +69,7 @@ func runDirDiff(cmd *cobra.Command, args []string) error {
 		return errSilent
 	}
 
-	showOnlyDiff, _ := cmd.Flags().GetBool(Flag_DirDiff_showOnlyDifferences)
-
-	return dirDiff(path1, path2, showOnlyDiff, true)
+	return dirDiff(path1, path2, dirdiffShowOnlyDifferences, true)
 }
 
 func dirDiff(basePath string, targetPath string, showOnlyDiff bool, verbose bool) error {

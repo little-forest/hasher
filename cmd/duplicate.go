@@ -23,12 +23,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Flag_Duplication_Source = "source"
-const Flag_Duplication_Target = "target"
-const Flag_Duplication_ShowExistsOnly = "exists-only"
-const Flag_Duplication_ShowMissingOnly = "missing-only"
-const Flag_Duplication_PrintSourcePathOnly = "print-source-path-only"
-const Flag_Duplication_PrintZero = "print0"
+const Flag_duplicate_Source = "source"
+const Flag_duplicate_Target = "target"
+const Flag_duplicate_ShowExistsOnly = "exists-only"
+const Flag_duplicate_ShowMissingOnly = "missing-only"
+const Flag_duplicate_PrintSourcePathOnly = "print-source-path-only"
+const Flag_duplicate_PrintZero = "print0"
+
+var (
+	duplicateSource              string
+	duplicateTarget              string
+	duplicateShowExistsOnly      bool
+	duplicateShowMissingOnly     bool
+	duplicatePrintSourcePathOnly bool
+	duplicatePrintZero           bool
+)
 
 const (
 	SHOW_ALWAYS = iota + 1
@@ -62,16 +71,11 @@ var checkDuplicationCmd = &cobra.Command{
 	RunE:         runCheckDuplicated,
 	SilenceUsage: true,
 	Args: func(cmd *cobra.Command, args []string) error {
-		showExistsOnly, _ := cmd.Flags().GetBool(Flag_Duplication_ShowExistsOnly)
-		showMissingOnly, _ := cmd.Flags().GetBool(Flag_Duplication_ShowMissingOnly)
-
-		if showExistsOnly && showMissingOnly {
+		if duplicateShowExistsOnly && duplicateShowMissingOnly {
 			return fmt.Errorf("can't specify both -e and -m option")
 		}
 
-		source, _ := cmd.Flags().GetString(Flag_Duplication_Source)
-		target, _ := cmd.Flags().GetString(Flag_Duplication_Target)
-		if source != "" && target != "" {
+		if duplicateSource != "" && duplicateTarget != "" {
 			return fmt.Errorf("can't specify both -s and -t option")
 		}
 		return nil
@@ -81,47 +85,38 @@ var checkDuplicationCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(checkDuplicationCmd)
 
-	checkDuplicationCmd.Flags().StringP(Flag_Duplication_Source, "s", "", "source hash file or directory")
-	checkDuplicationCmd.Flags().StringP(Flag_Duplication_Target, "t", "", "target hash file or directory")
-	checkDuplicationCmd.Flags().BoolP(Flag_Duplication_ShowExistsOnly, "e", false, "show exist files only")
-	checkDuplicationCmd.Flags().BoolP(Flag_Duplication_ShowMissingOnly, "m", false, "show missing files only")
-	checkDuplicationCmd.Flags().BoolP(Flag_Duplication_PrintSourcePathOnly, "f", false, "print only source file path")
-	checkDuplicationCmd.Flags().BoolP(Flag_Duplication_PrintZero, "0", false, "separate by null character")
+	checkDuplicationCmd.Flags().StringVarP(&duplicateSource, Flag_duplicate_Source, "s", "", "source hash file or directory")
+	checkDuplicationCmd.Flags().StringVarP(&duplicateTarget, Flag_duplicate_Target, "t", "", "target hash file or directory")
+	checkDuplicationCmd.Flags().BoolVarP(&duplicateShowExistsOnly, Flag_duplicate_ShowExistsOnly, "e", false, "show exist files only")
+	checkDuplicationCmd.Flags().BoolVarP(&duplicateShowMissingOnly, Flag_duplicate_ShowMissingOnly, "m", false, "show missing files only")
+	checkDuplicationCmd.Flags().BoolVarP(&duplicatePrintSourcePathOnly, Flag_duplicate_PrintSourcePathOnly, "f", false, "print only source file path")
+	checkDuplicationCmd.Flags().BoolVarP(&duplicatePrintZero, Flag_duplicate_PrintZero, "0", false, "separate by null character")
 }
 
 func newCkeckDuplicationOption(cmd *cobra.Command, args []string) checkDuplicationOption {
-	showExistsOnly, _ := cmd.Flags().GetBool(Flag_Duplication_ShowExistsOnly)
-	showMissingOnly, _ := cmd.Flags().GetBool(Flag_Duplication_ShowMissingOnly)
-
 	showMode := SHOW_ALWAYS
-	if showExistsOnly {
+	if duplicateShowExistsOnly {
 		showMode = SHOW_EXISTS_ONLY
-	} else if showMissingOnly {
+	} else if duplicateShowMissingOnly {
 		showMode = SHOW_MISSING_ONLY
 	}
 
-	printSourcePathOnly, _ := cmd.Flags().GetBool(Flag_Duplication_PrintSourcePathOnly)
-	printZero, _ := cmd.Flags().GetBool(Flag_Duplication_PrintZero)
-
 	opt := checkDuplicationOption{
 		HashAlg:             hashcore.NewDefaultHashAlg(),
-		PrintSourcePathOnly: printSourcePathOnly,
-		PrintZero:           printZero,
+		PrintSourcePathOnly: duplicatePrintSourcePathOnly,
+		PrintZero:           duplicatePrintZero,
 		ShowMode:            showMode,
 	}
 
 	// set target and source
-	optSource, _ := cmd.Flags().GetString(Flag_Duplication_Source)
-	optTarget, _ := cmd.Flags().GetString(Flag_Duplication_Target)
-
-	if optSource != "" {
+	if duplicateSource != "" {
 		// multiple target
-		opt.Source = []string{optSource}
+		opt.Source = []string{duplicateSource}
 		opt.Target = make([]string, len(args))
 		copy(opt.Target, args)
 	} else {
 		// multiple source
-		opt.Target = []string{optTarget}
+		opt.Target = []string{duplicateTarget}
 		opt.Source = make([]string, len(args))
 		copy(opt.Source, args)
 	}

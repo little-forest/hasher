@@ -24,7 +24,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Flag_Update_ForceUpdate = "force-update"
+const Flag_update_ForceUpdate = "force-update"
+
+var updateForceUpdate bool
 
 // updateCmd represents the update command
 var updateCmd = &cobra.Command{
@@ -38,19 +40,15 @@ var updateCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(updateCmd)
 
-	updateCmd.Flags().BoolP(Flag_Update_ForceUpdate, "f", false, "Force update")
+	updateCmd.Flags().BoolVarP(&updateForceUpdate, Flag_update_ForceUpdate, "f", false, "Force update")
 }
 
 func runUpdateHash(cmd *cobra.Command, args []string) error {
-	forceUpdate, _ := cmd.Flags().GetBool(Flag_Update_ForceUpdate)
-	verbose, _ := cmd.Flags().GetBool(Flag_root_Verbose)
-	recuesive, _ := cmd.Flags().GetBool(Flag_root_Recursive)
-
 	alg := hashcore.NewDefaultHashAlg()
 
-	if recuesive {
+	if recursive {
 		// recursive update, directory only
-		return updateHashConcurrently(args, alg, forceUpdate, verbose)
+		return updateHashConcurrently(args, alg, updateForceUpdate, verbose)
 	}
 
 	// normal update, file only
@@ -70,7 +68,7 @@ func runUpdateHash(cmd *cobra.Command, args []string) error {
 		}
 
 		// update file
-		changed, hash, err := hasher.UpdateHash(p, alg, forceUpdate)
+		changed, hash, err := hasher.UpdateHash(p, alg, updateForceUpdate)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			errResult = err

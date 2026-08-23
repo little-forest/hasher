@@ -42,8 +42,6 @@ func init() {
 }
 
 func runShow(cmd *cobra.Command, args []string) error {
-	recuesive, _ := cmd.Flags().GetBool(Flag_root_Recursive)
-
 	alg := hashcore.NewDefaultHashAlg()
 
 	showHeader()
@@ -57,7 +55,7 @@ func runShow(cmd *cobra.Command, args []string) error {
 		}
 
 		if isDir {
-			if !recuesive {
+			if !recursive {
 				// skip dir
 				fmt.Fprintf(os.Stderr, "Skip directory : %s\n", p)
 				continue

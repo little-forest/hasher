@@ -24,6 +24,11 @@ import (
 const Flag_root_Verbose = "verbose"
 const Flag_root_Recursive = "recursive"
 
+var (
+	verbose   bool
+	recursive bool
+)
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "hasher",
@@ -41,6 +46,6 @@ func Execute(ctx context.Context) error {
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolP(Flag_root_Verbose, "v", false, "verbose")
-	rootCmd.PersistentFlags().BoolP(Flag_root_Recursive, "r", false, "recursive")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, Flag_root_Verbose, "v", false, "verbose")
+	rootCmd.PersistentFlags().BoolVarP(&recursive, Flag_root_Recursive, "r", false, "recursive")
 }

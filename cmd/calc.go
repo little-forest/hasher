@@ -27,7 +27,9 @@ import (
 
 const DefaultHashAlgorithm = crypto.SHA1
 
-const Flag_Calc_NoShowPath = "no-show-path"
+const Flag_calc_NoShowPath = "no-show-path"
+
+var calcNoShowPath bool
 
 // calcCmd represents the calc command
 var calcCmd = &cobra.Command{
@@ -41,7 +43,7 @@ var calcCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(calcCmd)
 
-	calcCmd.Flags().BoolP(Flag_Calc_NoShowPath, "n", false, "don't show path")
+	calcCmd.Flags().BoolVarP(&calcNoShowPath, Flag_calc_NoShowPath, "n", false, "don't show path")
 }
 
 func runCalcHash(cmd *cobra.Command, args []string) error {
@@ -60,7 +62,7 @@ func runCalcHash(cmd *cobra.Command, args []string) error {
 			term.ShowError(err)
 			continue
 		}
-		if f, _ := cmd.Flags().GetBool(Flag_Calc_NoShowPath); !f {
+		if !calcNoShowPath {
 			fmt.Fprintf(os.Stdout, "%s\t%s\n", hash, v) // nolint:errcheck
 		} else {
 			fmt.Fprintf(os.Stdout, "%s\n", hash) // nolint:errcheck

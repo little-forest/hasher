@@ -43,9 +43,6 @@ func init() {
 }
 
 func runClear(cmd *cobra.Command, args []string) error {
-	verbose, _ := cmd.Flags().GetBool(Flag_root_Verbose)
-	recuesive, _ := cmd.Flags().GetBool(Flag_root_Recursive)
-
 	var errResult error
 	for _, p := range args {
 		ftype, err := hashcore.CheckFileType(p)
@@ -60,7 +57,7 @@ func runClear(cmd *cobra.Command, args []string) error {
 		}
 
 		if ftype == hashcore.Directory {
-			if !recuesive {
+			if !recursive {
 				// skip dir
 				continue
 			}

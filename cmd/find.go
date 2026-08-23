@@ -26,9 +26,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Flag_Find_NoHash = "no-hash"
-const Flag_Find_HasHash = "has-hash"
-const Flag_Find_File = "file"
+const Flag_find_NoHash = "no-hash"
+const Flag_find_HasHash = "has-hash"
+const Flag_find_File = "file"
+
+var (
+	findNoHash  bool
+	findHasHash bool
+	findFile    string
+)
 
 // findCmd represents the find command
 var findCmd = &cobra.Command{
@@ -52,17 +58,13 @@ var findCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(findCmd)
 
-	findCmd.Flags().BoolP(Flag_Find_NoHash, "n", false, "Find files that has no hash value on XAttr")
-	findCmd.Flags().BoolP(Flag_Find_HasHash, "e", false, "Find files that have hash value on XAttr")
-	findCmd.Flags().StringP(Flag_Find_File, "f", "", "Find files that have same hash value as given file")
-	findCmd.MarkFlagsMutuallyExclusive(Flag_Find_NoHash, Flag_Find_HasHash, Flag_Find_File)
+	findCmd.Flags().BoolVarP(&findNoHash, Flag_find_NoHash, "n", false, "Find files that has no hash value on XAttr")
+	findCmd.Flags().BoolVarP(&findHasHash, Flag_find_HasHash, "e", false, "Find files that have hash value on XAttr")
+	findCmd.Flags().StringVarP(&findFile, Flag_find_File, "f", "", "Find files that have same hash value as given file")
+	findCmd.MarkFlagsMutuallyExclusive(Flag_find_NoHash, Flag_find_HasHash, Flag_find_File)
 }
 
 func runFind(cmd *cobra.Command, args []string) error {
-	findNoHash, _ := cmd.Flags().GetBool(Flag_Find_NoHash)
-	findHasHash, _ := cmd.Flags().GetBool(Flag_Find_HasHash)
-	srcFile, _ := cmd.Flags().GetString(Flag_Find_File)
-
 	alg := hashcore.NewDefaultHashAlg()
 	if findNoHash {
 		w := &findNoHashWalker{Alg: alg}
@@ -70,8 +72,8 @@ func runFind(cmd *cobra.Command, args []string) error {
 	} else if findHasHash {
 		w := &findHasHashWalker{Alg: alg}
 		return fsutil.WalkDirsWithWalker(args, w)
-	} else if srcFile != "" {
-		return findSameHashFile(alg, srcFile, args)
+	} else if findFile != "" {
+		return findSameHashFile(alg, findFile, args)
 	}
 	return fmt.Errorf("invalid argument")
 }

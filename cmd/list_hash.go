@@ -24,8 +24,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Flag_ListHash_Out = "out"
-const Flag_ListHash_UpdateHash = "update-hash"
+const Flag_listHash_Out = "out"
+const Flag_listHash_UpdateHash = "update-hash"
+
+var (
+	listHashOut        string
+	listHashUpdateHash bool
+)
 
 // listHashCmd represents the listHash command
 var listHashCmd = &cobra.Command{
@@ -39,20 +44,18 @@ var listHashCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(listHashCmd)
 
-	listHashCmd.Flags().StringP(Flag_ListHash_Out, "o", "", "output file path")
-	listHashCmd.Flags().BoolP(Flag_ListHash_UpdateHash, "u", false, "When the hash is NOT up-to-date. Update it.")
+	listHashCmd.Flags().StringVarP(&listHashOut, Flag_listHash_Out, "o", "", "output file path")
+	listHashCmd.Flags().BoolVarP(&listHashUpdateHash, Flag_listHash_UpdateHash, "u", false, "When the hash is NOT up-to-date. Update it.")
 }
 
 func runListHash(cmd *cobra.Command, args []string) error {
-	out, _ := cmd.Flags().GetString(Flag_ListHash_Out)
-	updateHash, _ := cmd.Flags().GetBool(Flag_ListHash_UpdateHash)
 	alg := hashcore.NewDefaultHashAlg()
 
-	return listHashAll(args, alg, out, updateHash)
+	return listHashAll(args, alg, listHashOut, listHashUpdateHash)
 }
 
 func listHashAll(paths []string, alg *hashcore.HashAlg, outPath string, updateHash bool) error {
-	verbose := false
+	showProgress := false
 
 	var writer io.Writer
 	if outPath != "" {
@@ -66,7 +69,7 @@ func listHashAll(paths []string, alg *hashcore.HashAlg, outPath string, updateHa
 
 		// verobse mode when the output is a file and the update flag is true
 		if updateHash {
-			verbose = true
+			showProgress = true
 		}
 	} else {
 		writer = os.Stdout
@@ -74,12 +77,12 @@ func listHashAll(paths []string, alg *hashcore.HashAlg, outPath string, updateHa
 
 	var notifier hasher.ProgressNotifier
 
-	if verbose {
-		notifier = NewHasherProgressNotifier(1, verbose)
+	if showProgress {
+		notifier = NewHasherProgressNotifier(1, showProgress)
 	} else {
 		notifier = NewStdioProgressNotifier()
 	}
 
-	err := hasher.ListHash2(paths, hashcore.NewDefaultHashAlg(), writer, notifier, verbose, updateHash)
+	err := hasher.ListHash2(paths, hashcore.NewDefaultHashAlg(), writer, notifier, showProgress, updateHash)
 	return err
 }
