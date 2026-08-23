@@ -1,0 +1,73 @@
+/*
+Copyright © 2022 Yusuke KOMORI
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+package cmd
+
+import (
+	"fmt"
+
+	"github.com/little-forest/hasher/hashcore"
+	"github.com/spf13/cobra"
+)
+
+// compareCmd represents the compare command
+var compareCmd = &cobra.Command{
+	Use:           "compare FILE1 FILE2",
+	Short:         "Compare if two files are identical",
+	Long:          ``,
+	RunE:          runCompare,
+	SilenceUsage:  true,
+	SilenceErrors: true,
+}
+
+func init() {
+	rootCmd.AddCommand(compareCmd)
+}
+
+func runCompare(cmd *cobra.Command, args []string) error {
+	if len(args) < 2 {
+		printErr(cmd, fmt.Errorf("too few arguments"))
+		return errSilent
+	}
+
+	result, err := compare(args[0], args[1])
+	if err != nil {
+		return errSilent
+	}
+
+	if result {
+		return nil
+	}
+	return errSilent
+}
+
+/*
+Return true if given two failes have same hash value.
+*/
+func compare(path1 string, path2 string) (bool, error) {
+	hashAlg := hashcore.NewDefaultHashAlg()
+
+	_, hash1, err := hashcore.UpdateHashStrictly(path1, hashAlg, false)
+	if err != nil {
+		return false, err
+	}
+
+	_, hash2, err := hashcore.UpdateHashStrictly(path2, hashAlg, false)
+	if err != nil {
+		return false, err
+	}
+
+	return (hash1.String() == hash2.String()), nil
+}

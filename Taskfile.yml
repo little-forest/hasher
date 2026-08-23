@@ -1,0 +1,46 @@
+version: "3"
+
+tasks:
+  build:
+    desc: Build for current platform only (fast, for local development)
+    cmds:
+      - goreleaser build --single-target --snapshot --clean
+      - task: link-binary
+
+  build-all:
+    desc: Build for all platforms (linux/darwin/windows x amd64/arm64, for CI/CD)
+    cmds:
+      - goreleaser build --snapshot --clean
+
+  link-binary:
+    desc: Create symlink to current platform binary
+    silent: true
+    cmds:
+      - |
+        BINARY_NAME="hasher"
+        GOOS=$(go env GOOS)
+        GOARCH=$(go env GOARCH)
+        if [ "$GOARCH" = "amd64" ]; then
+          VARIANT="v1"
+        elif [ "$GOARCH" = "arm64" ]; then
+          VARIANT="v8.0"
+        fi
+        BINARY_DIR="dist/${BINARY_NAME}_${GOOS}_${GOARCH}_${VARIANT}"
+        rm -f "$BINARY_NAME"
+        ln -s "${BINARY_DIR}/${BINARY_NAME}" "$BINARY_NAME"
+        echo "Created symlink: $BINARY_NAME -> ${BINARY_DIR}/${BINARY_NAME}"
+
+  release-snapshot:
+    desc: Create a snapshot release (no publish)
+    cmds:
+      - goreleaser release --snapshot --clean
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./...
+
+  lint:
+    desc: Run linter
+    cmds:
+      - golangci-lint run

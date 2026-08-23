@@ -1,0 +1,151 @@
+/*
+Copyright © 2022 Yusuke KOMORI
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+package cmd
+
+import (
+	"fmt"
+
+	"github.com/little-forest/hasher/hashcore"
+	"github.com/little-forest/hasher/internal/hasher"
+	"github.com/little-forest/hasher/internal/term"
+	"github.com/morikuni/aec"
+	"github.com/spf13/cobra"
+)
+
+const Flag_dirdiff_ShowOnlyDifferences = "show-only-differences"
+
+var dirdiffShowOnlyDifferences bool
+
+// dirdiffCmd represents the dirdiff command
+var dirdiffCmd = &cobra.Command{
+	Use:   "dirdiff BASE_DIR TARGET_DIR",
+	Args:  exactArgsOrSilent(2),
+	Short: "Recursively compares two directories and displays the differences.",
+	Long: `Recursively compares two directories and displays the differences.
+Each files are compared using hash values.
+
+  [=] : same file
+  [+] : added file
+  [-] : removed file
+  [>] : different file (base is newer)
+  [<] : different file (target is newer)
+  [~] : different file (modtime is same)
+  [R] : renamed file
+`,
+	RunE:          runDirDiff,
+	SilenceUsage:  true,
+	SilenceErrors: true,
+}
+
+func init() {
+	rootCmd.AddCommand(dirdiffCmd)
+
+	dirdiffCmd.Flags().BoolVarP(&dirdiffShowOnlyDifferences, Flag_dirdiff_ShowOnlyDifferences, "d", false, "Show only differences")
+}
+
+func runDirDiff(cmd *cobra.Command, args []string) error {
+	path1 := args[0]
+	path2 := args[1]
+
+	if err := checkDirectory(path1); err != nil {
+		printErr(cmd, err)
+		return errSilent
+	}
+	if err := checkDirectory(path2); err != nil {
+		printErr(cmd, err)
+		return errSilent
+	}
+
+	return dirDiff(path1, path2, dirdiffShowOnlyDifferences, true)
+}
+
+func dirDiff(basePath string, targetPath string, showOnlyDiff bool, verbose bool) error {
+	// diff
+	dirPairs, err := hasher.DirDiffRecursively(basePath, targetPath)
+	if err != nil {
+		term.ShowErrorMsg("dirdiff failed : %s", err.Error())
+		return errSilent
+	}
+
+	// display
+	for _, pair := range dirPairs {
+		switch pair.Status {
+		case hasher.BASE_ONLY:
+			fmt.Println(term.C_cyan.Apply(fmt.Sprintf("[+] %s", pair.Path())))
+			displayDir(pair.Base, showOnlyDiff)
+		case hasher.TARGET_ONLY:
+			fmt.Println(term.C_pink.Apply(fmt.Sprintf("[-] %s", pair.Path())))
+			displayDir(pair.Target, showOnlyDiff)
+		default:
+			// same
+			if pair.Base.IsAllSame() && !showOnlyDiff {
+				fmt.Println(term.C_gray.Apply(fmt.Sprintf("[=] %s", pair.Path())))
+			} else {
+				fmt.Printf("    %s\n", pair.Path())
+			}
+			displayDir(pair.Base, showOnlyDiff)
+		}
+	}
+
+	// RESULT
+	return nil
+}
+
+func displayDir(d *hasher.DirDiff, showOnlyDiff bool) {
+	for _, f := range d.GetSortedChildren() {
+		if showOnlyDiff && f.Status == hasher.SAME {
+			continue
+		}
+		col := getColorByStatus(f.Status)
+
+		msg := col.Apply(fmt.Sprintf("      %s %s", f.StatusMark(), f.Basename))
+		if f.Status == hasher.RENAMED {
+			msg += "  " + term.C_blue.Apply("<-->") + "  " + col.Apply(f.PairFileName)
+		}
+		fmt.Println(msg)
+	}
+}
+
+func checkDirectory(path string) error {
+	isDir, err := hashcore.IsDirectory(path)
+	if err != nil {
+		return err
+	}
+	if !isDir {
+		return fmt.Errorf("not a directory : %s", path)
+	}
+	return nil
+}
+
+func getColorByStatus(s hasher.DiffStatus) aec.ANSI {
+	switch s {
+	case hasher.ADDED:
+		return term.C_lime
+	case hasher.SAME:
+		return term.C_gray
+	case hasher.NOT_SAME_NEW:
+		return term.C_orange
+	case hasher.NOT_SAME_OLD:
+		return term.C_orange
+	case hasher.NOT_SAME:
+		return term.C_orange
+	case hasher.RENAMED:
+		return term.C_yellow
+	case hasher.REMOVED:
+		return term.C_pink
+	}
+	return term.C_default
+}

@@ -1,3 +1,4 @@
+version: 2
 project_name: hasher
 env:
   - GO111MODULE=on
@@ -33,6 +34,6 @@ archives:
       {{- if .Arm }}v{{ .Arm }}{{ end -}}
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
 release:
   prerelease: auto
