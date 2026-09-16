@@ -4,6 +4,7 @@ go 1.26
 
 require (
 	github.com/deckarep/golang-set/v2 v2.9.0
+	github.com/deckarep/golang-set/v3 v3.0.0
 	github.com/morikuni/aec v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/xattr v0.4.12
